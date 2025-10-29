@@ -604,20 +604,55 @@
         let currentPosition = null;
 
         const testLocations = [
-            { name: 'Venice - Lincoln Blvd', lat: 33.9916, lon: -118.4515 },
-            { name: 'Culver City', lat: 34.0058, lon: -118.4017 },
-            { name: 'Santa Monica', lat: 34.0333, lon: -118.4798 },
-            { name: 'San Francisco (No alerts)', lat: 37.7749, lon: -122.4194 }
+            { name: 'Sherman Oaks - Ventura/405', lat: 34.1510, lon: -118.4705 },
+            { name: 'Sherman Oaks - Sepulveda/101', lat: 34.1545, lon: -118.4655 },
+            { name: 'Encino - Balboa/101', lat: 34.1542, lon: -118.5023 },
+            { name: 'Studio City - Coldwater/101', lat: 34.1455, lon: -118.4138 },
+            { name: 'Studio City - Whitsett/101', lat: 34.1425, lon: -118.4075 },
+            { name: 'Sepulveda Pass - Mulholland/405', lat: 34.0988, lon: -118.4514 }
         ];
         let currentTestLocation = 0;
 
         const bridges = [
-            { id: 'CA-VENICE-LINCOLN-001', name: 'Lincoln Blvd Railroad Bridge', lat: 33.9916, lon: -118.4515, clearance: 11.5, location: 'Venice, CA' },
-            { id: 'CA-CULVER-CITY-001', name: 'Culver Blvd Railroad Underpass', lat: 34.0058, lon: -118.4017, clearance: 11.0, location: 'Culver City, CA' },
-            { id: 'CA-VENICE-BLVD-001', name: 'Venice Blvd Railroad Bridge', lat: 34.0043, lon: -118.4198, clearance: 11.8, location: 'Los Angeles, CA' },
-            { id: 'CA-MDR-WASHINGTON-001', name: 'Washington Blvd Bridge', lat: 33.9897, lon: -118.4242, clearance: 12.8, location: 'Marina Del Rey, CA' },
-            { id: 'CA-SM-OLYMPIC-001', name: 'Olympic Blvd Railroad Bridge', lat: 34.0333, lon: -118.4798, clearance: 12.2, location: 'Santa Monica, CA' },
-            { id: 'CA-SM-I10-LINCOLN-001', name: 'I-10 Overpass at Lincoln', lat: 34.0153, lon: -118.4523, clearance: 13.5, location: 'Santa Monica, CA' }
+            // SANTA MONICA / VENICE / CULVER CITY AREA (5 bridges)
+            { id: 'SM-PCH-INCLINE-001', name: 'PCH/California Incline Underpass', lat: 34.0157, lon: -118.4965, clearance: 13.2, location: 'Santa Monica, CA' },
+            { id: 'VE-LINCOLN-VENICE-001', name: 'Lincoln Blvd at Venice Blvd', lat: 34.0054, lon: -118.4490, clearance: 14.0, location: 'Venice, CA' },
+            { id: 'CC-EXPO-CULVER-001', name: 'Expo Line Underpass at Culver Blvd', lat: 34.0165, lon: -118.3967, clearance: 13.1, location: 'Culver City, CA' },
+            { id: 'MDR-LINCOLN-BALLONA-001', name: 'Lincoln Blvd over Ballona Creek', lat: 33.9798, lon: -118.4423, clearance: 14.5, location: 'Marina Del Rey, CA' },
+            { id: 'VE-WASHINGTON-UNDER-001', name: 'Washington Blvd Service Road', lat: 34.0021, lon: -118.4388, clearance: 12.9, location: 'Venice, CA' },
+            
+            // SHERMAN OAKS AREA (7 bridges)
+            { id: 'SO-101-SEPULVEDA-001', name: 'Sepulveda Blvd over 101', lat: 34.1545, lon: -118.4655, clearance: 14.0, location: 'Sherman Oaks, CA' },
+            { id: 'SO-405-VENTURA-001', name: 'Ventura Blvd over 405', lat: 34.1510, lon: -118.4705, clearance: 13.2, location: 'Sherman Oaks, CA' },
+            { id: 'SO-101-VANNUYS-001', name: 'Van Nuys Blvd over 101', lat: 34.1520, lon: -118.4485, clearance: 13.8, location: 'Sherman Oaks, CA' },
+            { id: 'SO-101-KESTER-001', name: 'Kester Ave under 101', lat: 34.1535, lon: -118.4580, clearance: 13.1, location: 'Sherman Oaks, CA' },
+            { id: 'SO-101-SEPULVEDA-002', name: 'Sepulveda Blvd over 101 (South)', lat: 34.1495, lon: -118.4650, clearance: 13.5, location: 'Sherman Oaks, CA' },
+            { id: 'SO-405-MOORPARK-001', name: 'Moorpark St Service Road', lat: 34.1640, lon: -118.4720, clearance: 12.9, location: 'Sherman Oaks, CA' },
+            { id: 'SO-405-BURBANK-001', name: 'Burbank Blvd over 405', lat: 34.1680, lon: -118.4750, clearance: 13.4, location: 'Sherman Oaks, CA' },
+            
+            // ENCINO AREA (6 bridges)
+            { id: 'EN-101-BALBOA-001', name: 'Balboa Blvd over 101', lat: 34.1542, lon: -118.5023, clearance: 13.3, location: 'Encino, CA' },
+            { id: 'EN-101-HAYVENHURST-001', name: 'Hayvenhurst Ave over 101', lat: 34.1548, lon: -118.4895, clearance: 13.2, location: 'Encino, CA' },
+            { id: 'EN-101-WHITEOAK-001', name: 'White Oak Ave over 101', lat: 34.1555, lon: -118.5150, clearance: 13.5, location: 'Encino, CA' },
+            { id: 'EN-101-RESEDA-001', name: 'Reseda Blvd over 101', lat: 34.1560, lon: -118.5365, clearance: 13.8, location: 'Encino, CA' },
+            { id: 'EN-101-LINDLEY-001', name: 'Lindley Ave over 101', lat: 34.1565, lon: -118.5245, clearance: 13.4, location: 'Encino, CA' },
+            { id: 'EN-101-LOUISE-001', name: 'Louise Ave Service Road', lat: 34.1525, lon: -118.4980, clearance: 12.8, location: 'Encino, CA' },
+            
+            // STUDIO CITY AREA (6 bridges)
+            { id: 'SC-101-COLDWATER-001', name: 'Coldwater Canyon over 101', lat: 34.1455, lon: -118.4138, clearance: 13.0, location: 'Studio City, CA' },
+            { id: 'SC-101-LAUREL-001', name: 'Laurel Canyon Blvd over 101', lat: 34.1397, lon: -118.3963, clearance: 13.2, location: 'Studio City, CA' },
+            { id: 'SC-101-WHITSETT-001', name: 'Whitsett Ave under 101', lat: 34.1425, lon: -118.4075, clearance: 12.7, location: 'Studio City, CA' },
+            { id: 'SC-101-COLFAX-001', name: 'Colfax Ave Service Road', lat: 34.1440, lon: -118.4000, clearance: 13.1, location: 'Studio City, CA' },
+            { id: 'SC-101-TUJUNGA-001', name: 'Tujunga Ave over 101', lat: 34.1380, lon: -118.3850, clearance: 13.5, location: 'Studio City, CA' },
+            { id: 'SC-101-LANKERSHIM-001', name: 'Lankershim Blvd over 101', lat: 34.1365, lon: -118.3880, clearance: 13.4, location: 'Studio City, CA' },
+            
+            // 405 CORRIDOR (6 bridges)
+            { id: 'LA-405-MULHOLLAND-001', name: 'Mulholland Dr over 405 (Sepulveda Pass)', lat: 34.0988, lon: -118.4514, clearance: 13.3, location: 'Los Angeles, CA' },
+            { id: 'LA-405-SUNSET-001', name: 'Sunset Blvd over 405', lat: 34.0791, lon: -118.4448, clearance: 13.5, location: 'Bel Air, CA' },
+            { id: 'LA-405-GETTY-001', name: 'Getty Center Dr over 405', lat: 34.0801, lon: -118.4417, clearance: 14.2, location: 'Brentwood, CA' },
+            { id: 'VN-405-VICTORY-001', name: 'Victory Blvd over 405', lat: 34.1876, lon: -118.4779, clearance: 13.4, location: 'Van Nuys, CA' },
+            { id: 'VN-405-SHERMAN-001', name: 'Sherman Way over 405', lat: 34.2010, lon: -118.4790, clearance: 14.0, location: 'Van Nuys, CA' },
+            { id: 'VN-405-ROSCOE-001', name: 'Roscoe Blvd over 405', lat: 34.2198, lon: -118.4800, clearance: 14.5, location: 'Van Nuys, CA' }
         ];
 
         // DOM Elements
@@ -638,13 +673,6 @@
         const cancelBtn = document.getElementById('cancelBtn');
         const saveBtn = document.getElementById('saveBtn');
 
-        // Load saved vehicle height
-        const savedHeight = localStorage.getItem('vehicleHeight');
-        if (savedHeight) {
-            vehicleHeight = parseFloat(savedHeight);
-            updateVehicleDisplay();
-        }
-
         // Vehicle Settings
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -659,7 +687,6 @@
             const newHeight = parseFloat(heightInput.value);
             if (newHeight >= 8 && newHeight <= 16) {
                 vehicleHeight = newHeight;
-                localStorage.setItem('vehicleHeight', vehicleHeight);
                 updateVehicleDisplay();
                 vehicleModal.classList.remove('active');
                 if (isMonitoring) checkAlerts();
