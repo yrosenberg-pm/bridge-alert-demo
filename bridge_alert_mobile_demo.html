@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Road Warrior</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e1a;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Minimal Header */
+        .header {
+            padding: 24px 20px 16px;
+            background: linear-gradient(180deg, rgba(10, 14, 26, 0.95) 0%, rgba(10, 14, 26, 0) 100%);
+            position: relative;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Status Indicator */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: absolute;
+            top: 28px;
+            right: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #64748b;
+            transition: all 0.3s;
+        }
+
+        .status-dot.active {
+            background: #22c55e;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-text.active {
+            color: #22c55e;
+        }
+
+        /* Vehicle Card */
+        .vehicle-card {
+            margin: 0 20px 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .vehicle-emoji {
+            font-size: 42px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .vehicle-info {
+            flex: 1;
+        }
+
+        .vehicle-type {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #e2e8f0;
+        }
+
+        .vehicle-spec {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* GPS Info */
+        .gps-info {
+            margin: 0 20px 24px;
+            padding: 16px;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .gps-coords {
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            font-family: 'Courier New', monospace;
+        }
+
+        .gps-accuracy {
+            font-size: 11px;
+            padding: 4px 8px;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        /* Alerts Section */
+        .alerts-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .alerts-section::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            opacity: 0.6;
+        }
+
+        .empty-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+        }
+
+        .empty-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        /* Alert Card - Modern Design */
+        .alert {
+            margin-bottom: 16px;
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .alert.critical {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.15) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .alert.warning {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.1) 100%);
+            border: 2px solid rgba(249, 115, 22, 0.4);
+        }
+
+        .alert.caution {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(202, 138, 4, 0.1) 100%);
+            border: 2px solid rgba(234, 179, 8, 0.4);
+        }
+
+        .alert.critical::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #ef4444;
+            animation: pulse-line 1.5s infinite;
+        }
+
+        @keyframes pulse-line {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .alert-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .alert-badge {
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-block;
+        }
+
+        .alert.critical .alert-badge {
+            background: #ef4444;
+            color: white;
+        }
+
+        .alert.warning .alert-badge {
+            background: #f97316;
+            color: white;
+        }
+
+        .alert.caution .alert-badge {
+            background: #eab308;
+            color: #0a0e1a;
+        }
+
+        .alert-distance {
+            text-align: right;
+        }
+
+        .distance-value {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .distance-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .bridge-name {
+            font-size: 19px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .bridge-location {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .clearance-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .clearance-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .clearance-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .clearance-value {
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .clearance-value.danger {
+            color: #ef4444;
+        }
+
+        .alert-action {
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .alert.critical .alert-action {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert.warning .alert-action {
+            background: rgba(249, 115, 22, 0.3);
+            color: #fdba74;
+        }
+
+        .alert.caution .alert-action {
+            background: rgba(234, 179, 8, 0.3);
+            color: #fde047;
+        }
+
+        /* Control Button */
+        .control-area {
+            padding: 20px;
+            background: linear-gradient(0deg, rgba(10, 14, 26, 0.95) 0%, rgba(10, 14, 26, 0) 100%);
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn.start {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            color: white;
+            box-shadow: 0 8px 24px rgba(96, 165, 250, 0.4);
+        }
+
+        .control-btn.start:active {
+            transform: scale(0.98);
+        }
+
+        .control-btn.stop {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error */
+        .error {
+            margin: 0 20px 16px;
+            padding: 16px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            font-size: 13px;
+            color: #fca5a5;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="brand">Road Warrior</div>
+            <div class="tagline">Bridge Clearance Alert System</div>
+            <div class="status-bar">
+                <div class="status-dot" id="statusDot"></div>
+                <div class="status-text" id="statusText">Inactive</div>
+            </div>
+        </div>
+
+        <!-- Vehicle Card -->
+        <div class="vehicle-card">
+            <div class="vehicle-emoji">🚛</div>
+            <div class="vehicle-info">
+                <div class="vehicle-type">Class 8 Tractor-Trailer</div>
+                <div class="vehicle-spec">Height: 13.6 feet</div>
+            </div>
+        </div>
+
+        <!-- GPS Info -->
+        <div class="gps-info" id="gpsInfo" style="display: none;">
+            <div class="gps-coords" id="gpsCoords">---.------, ---.------</div>
+            <div class="gps-accuracy" id="gpsAccuracy">GPS</div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alerts-section" id="alertsSection">
+            <div class="empty-state">
+                <div class="empty-icon">✓</div>
+                <div class="empty-title">All Clear</div>
+                <div class="empty-subtitle">No bridge alerts detected</div>
+            </div>
+        </div>
+
+        <!-- Control Button -->
+        <div class="control-area">
+            <button class="control-btn start" id="controlBtn">
+                <span>Start Monitoring</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const VEHICLE_HEIGHT = 13.6;
+        let watchId = null;
+        let isMonitoring = false;
+        let currentPosition = null;
+
+        const controlBtn = document.getElementById('controlBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const gpsInfo = document.getElementById('gpsInfo');
+        const gpsCoords = document.getElementById('gpsCoords');
+        const gpsAccuracy = document.getElementById('gpsAccuracy');
+        const alertsSection = document.getElementById('alertsSection');
+
+        const bridges = [
+            { id: 'CA-VENICE-LINCOLN-001', name: 'Lincoln Blvd Railroad Bridge', lat: 33.9916, lon: -118.4515, clearance: 11.5, location: 'Venice, CA' },
+            { id: 'CA-CULVER-CITY-001', name: 'Culver Blvd Railroad Underpass', lat: 34.0058, lon: -118.4017, clearance: 11.0, location: 'Culver City, CA' },
+            { id: 'CA-VENICE-BLVD-001', name: 'Venice Blvd Railroad Bridge', lat: 34.0043, lon: -118.4198, clearance: 11.8, location: 'Los Angeles, CA' },
+            { id: 'CA-MDR-WASHINGTON-001', name: 'Washington Blvd Bridge', lat: 33.9897, lon: -118.4242, clearance: 12.8, location: 'Marina Del Rey, CA' },
+            { id: 'CA-SM-OLYMPIC-001', name: 'Olympic Blvd Railroad Bridge', lat: 34.0333, lon: -118.4798, clearance: 12.2, location: 'Santa Monica, CA' },
+            { id: 'CA-SM-I10-LINCOLN-001', name: 'I-10 Overpass at Lincoln', lat: 34.0153, lon: -118.4523, clearance: 13.5, location: 'Santa Monica, CA' }
+        ];
+
+        controlBtn.addEventListener('click', () => {
+            isMonitoring ? stopMonitoring() : startMonitoring();
+        });
+
+        function startMonitoring() {
+            if (!navigator.geolocation) {
+                showError('GPS not available on this device');
+                return;
+            }
+
+            watchId = navigator.geolocation.watchPosition(
+                onPositionUpdate,
+                onPositionError,
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            );
+
+            isMonitoring = true;
+            updateUI();
+        }
+
+        function stopMonitoring() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            isMonitoring = false;
+            currentPosition = null;
+            updateUI();
+        }
+
+        function onPositionUpdate(position) {
+            currentPosition = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+
+            gpsCoords.textContent = `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
+            gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
+            gpsInfo.style.display = 'flex';
+
+            checkAlerts();
+        }
+
+        function onPositionError(error) {
+            showError(`GPS Error: ${error.message}`);
+        }
+
+        function checkAlerts() {
+            if (!currentPosition) return;
+
+            const alerts = [];
+            const { latitude, longitude } = currentPosition;
+
+            for (const bridge of bridges) {
+                const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
+                
+                if (VEHICLE_HEIGHT > bridge.clearance) {
+                    let level = null;
+                    if (distance <= 0.5) level = 'critical';
+                    else if (distance <= 1.0) level = 'warning';
+                    else if (distance <= 2.0) level = 'caution';
+
+                    if (level) {
+                        alerts.push({
+                            bridge,
+                            distance,
+                            level,
+                            diff: VEHICLE_HEIGHT - bridge.clearance
+                        });
+                    }
+                }
+            }
+
+            displayAlerts(alerts);
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function displayAlerts(alerts) {
+            if (alerts.length === 0) {
+                alertsSection.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
+                        <div class="empty-title">All Clear</div>
+                        <div class="empty-subtitle">No bridge alerts detected</div>
+                    </div>
+                `;
+                return;
+            }
+
+            alerts.sort((a, b) => a.distance - b.distance);
+
+            const html = alerts.map(alert => {
+                const actionText = {
+                    critical: '🚨 STOP - REROUTE IMMEDIATELY',
+                    warning: '⚠️ PREPARE TO REROUTE',
+                    caution: '⚠️ CAUTION - MONITOR ROUTE'
+                }[alert.level];
+
+                return `
+                    <div class="alert ${alert.level}">
+                        <div class="alert-top">
+                            <div class="alert-badge">${alert.level}</div>
+                            <div class="alert-distance">
+                                <div class="distance-value">${alert.distance.toFixed(1)}</div>
+                                <div class="distance-label">Miles</div>
+                            </div>
+                        </div>
+                        <div class="bridge-name">${alert.bridge.name}</div>
+                        <div class="bridge-location">${alert.bridge.location}</div>
+                        <div class="clearance-grid">
+                            <div class="clearance-box">
+                                <div class="clearance-label">Bridge</div>
+                                <div class="clearance-value">${alert.bridge.clearance}'</div>
+                            </div>
+                            <div class="clearance-box">
+                                <div class="clearance-label">Your Truck</div>
+                                <div class="clearance-value danger">${VEHICLE_HEIGHT}'</div>
+                            </div>
+                            <div class="clearance-box">
+                                <div class="clearance-label">Over By</div>
+                                <div class="clearance-value danger">+${alert.diff.toFixed(1)}'</div>
+                            </div>
+                        </div>
+                        <div class="alert-action">${actionText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            alertsSection.innerHTML = html;
+
+            if (alerts[0].level === 'critical' && navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+        }
+
+        function updateUI() {
+            if (isMonitoring) {
+                controlBtn.className = 'control-btn stop';
+                controlBtn.innerHTML = '<div class="spinner"></div><span>Monitoring Active</span>';
+                statusDot.classList.add('active');
+                statusText.classList.add('active');
+                statusText.textContent = 'Active';
+            } else {
+                controlBtn.className = 'control-btn start';
+                controlBtn.innerHTML = '<span>Start Monitoring</span>';
+                statusDot.classList.remove('active');
+                statusText.classList.remove('active');
+                statusText.textContent = 'Inactive';
+                gpsInfo.style.display = 'none';
+                alertsSection.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
+                        <div class="empty-title">All Clear</div>
+                        <div class="empty-subtitle">No bridge alerts detected</div>
+                    </div>
+                `;
+            }
+        }
+
+        function showError(message) {
+            const error = document.createElement('div');
+            error.className = 'error';
+            error.textContent = message;
+            document.querySelector('.container').insertBefore(error, gpsInfo);
+            setTimeout(() => error.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
