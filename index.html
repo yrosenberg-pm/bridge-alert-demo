@@ -759,8 +759,8 @@
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 5; // Reduced from 10 to 5 for faster response
-        const HEADING_CHANGE_THRESHOLD = 5; // Degrees - reduced from 15 to 5
+        const HEADING_HISTORY_SIZE = 15; // Increased from 5 to 15 for more smoothing
+        const HEADING_CHANGE_THRESHOLD = 3; // Reduced from 5 to 3 - more filtering
         let headingWatchId = null;
 
         const testLocations = [
@@ -1022,6 +1022,11 @@
         function onDeviceOrientation(event) {
             if (isTestMode || !currentPosition) return;
             
+            // Throttle compass updates to reduce jitter
+            const now = Date.now();
+            if (now - (window.lastCompassUpdate || 0) < 100) return; // Max 10 updates/sec
+            window.lastCompassUpdate = now;
+            
             let compassHeading = null;
             
             if (event.webkitCompassHeading !== undefined) {
@@ -1102,11 +1107,13 @@
         function getSmoothedHeading() {
             if (headingHistory.length === 0) return null;
             
+            // Use exponential weighted average - much more weight to recent readings
             let sumX = 0, sumY = 0, totalWeight = 0;
             
             for (let i = 0; i < headingHistory.length; i++) {
                 const heading = headingHistory[i];
-                const weight = (i + 1) / headingHistory.length;
+                // Exponential weight: recent readings get MUCH more weight
+                const weight = Math.pow(2, i);
                 const rad = toRadians(heading);
                 sumX += Math.cos(rad) * weight;
                 sumY += Math.sin(rad) * weight;
