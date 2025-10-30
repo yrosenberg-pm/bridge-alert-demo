@@ -460,9 +460,12 @@
 
         /* Control Area */
         .control-area {
-            padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+            padding: 16px 20px calc(80px + env(safe-area-inset-bottom));
             background: linear-gradient(0deg, rgba(10, 14, 26, 0.98) 0%, rgba(10, 14, 26, 0) 100%);
             flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
         }
 
         .control-buttons {
