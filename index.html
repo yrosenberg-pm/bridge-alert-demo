@@ -907,15 +907,19 @@
                 return;
             }
 
+            // Watch position for location updates - high accuracy mode
             watchId = navigator.geolocation.watchPosition(
                 onPositionUpdate,
                 onPositionError,
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+                { 
+                    enableHighAccuracy: true, 
+                    maximumAge: 0, 
+                    timeout: 10000
+                }
             );
 
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', onDeviceOrientation);
-            }
+            // Don't use device orientation - too unreliable in vehicles
+            // Only rely on GPS heading when moving
 
             isMonitoring = true;
             isTestMode = false;
@@ -929,8 +933,6 @@
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
             }
-            
-            window.removeEventListener('deviceorientation', onDeviceOrientation);
             
             isMonitoring = false;
             isTestMode = false;
@@ -993,29 +995,49 @@
             };
 
             let newHeading = null;
+            const MINIMUM_SPEED_MPH = 5; // Only trust heading when moving at least 5 mph
+            const speedMph = (position.coords.speed || 0) * 2.23694; // m/s to mph
             
-            // Accept heading from GPS regardless of speed
-            if (position.coords.heading !== null && position.coords.heading !== undefined) {
+            // Priority 1: GPS heading when moving fast enough (most accurate)
+            if (position.coords.heading !== null && 
+                position.coords.heading !== undefined && 
+                speedMph >= MINIMUM_SPEED_MPH) {
                 newHeading = position.coords.heading;
-            } else if (previousPosition) {
-                // Calculate from movement
+                headingLocked = false; // Unlock when we have good GPS heading
+            }
+            // Priority 2: Calculate from position changes when moving
+            else if (previousPosition && speedMph >= MINIMUM_SPEED_MPH) {
                 newHeading = calculateBearing(
                     previousPosition.latitude,
                     previousPosition.longitude,
                     currentPosition.latitude,
                     currentPosition.longitude
                 );
+                headingLocked = false;
+            }
+            // Priority 3: When stopped or moving slowly, maintain last known heading
+            else if (currentHeading !== null) {
+                // Keep the last known heading - don't update
+                headingLocked = true;
             }
 
-            if (newHeading !== null) {
-                // If moving, unlock heading and update
-                if (position.coords.speed > 0.5) {
-                    headingLocked = false;
-                    headingStableCount = 0;
+            // Only update heading if we have new data and not locked
+            if (newHeading !== null && !headingLocked) {
+                // Check if this is a significant change
+                if (currentHeading !== null) {
+                    let diff = Math.abs(newHeading - currentHeading);
+                    if (diff > 180) diff = 360 - diff;
+                    
+                    // Only add if significant change OR still building history
+                    if (diff >= HEADING_CHANGE_THRESHOLD || headingHistory.length < 3) {
+                        addHeadingToHistory(newHeading);
+                        currentHeading = getSmoothedHeading();
+                    }
+                } else {
+                    // First reading
+                    addHeadingToHistory(newHeading);
+                    currentHeading = getSmoothedHeading();
                 }
-                
-                addHeadingToHistory(newHeading);
-                currentHeading = getSmoothedHeading();
             }
 
             updateGPSDisplay();
@@ -1082,10 +1104,20 @@
             
             gpsCoords.textContent = `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
             
+            const speedMph = (currentPosition.speed || 0) * 2.23694;
+            
             if (currentHeading !== null) {
-                gpsHeading.textContent = `Heading: ${Math.round(currentHeading)}° ${getCardinalDirection(currentHeading)}`;
+                const headingText = `Heading: ${Math.round(currentHeading)}° ${getCardinalDirection(currentHeading)}`;
+                if (speedMph < 5) {
+                    gpsHeading.textContent = `${headingText} (Stopped)`;
+                    gpsHeading.style.color = '#94a3b8'; // Dimmed when stopped
+                } else {
+                    gpsHeading.textContent = headingText;
+                    gpsHeading.style.color = '#60a5fa'; // Bright when moving
+                }
             } else {
-                gpsHeading.textContent = `Heading: Calculating...`;
+                gpsHeading.textContent = `Heading: Start driving...`;
+                gpsHeading.style.color = '#94a3b8';
             }
             
             gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
@@ -1157,8 +1189,12 @@
         }
 
         function isHeadingTowards(bearing, heading, tolerance = 90) {
-            if (heading === null || headingHistory.length < 2) {
-                // Reduced from 5 to 2 - start filtering sooner
+            // Only filter by heading if we have accurate heading data (moving >= 5 mph)
+            if (heading === null || headingHistory.length < 3 || headingLocked) {
+                // Show all alerts if:
+                // - No heading data yet
+                // - Not enough history
+                // - Stopped/slow (heading locked)
                 return true;
             }
             
