@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Road Warrior</title>
+    <title>Road Warrior - Bridge Alert System</title>
     <style>
         * {
             margin: 0;
@@ -471,6 +471,7 @@
         .control-buttons {
             display: flex;
             gap: 12px;
+            margin-bottom: 12px;
         }
 
         .control-btn {
@@ -486,6 +487,18 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+        }
+
+        .map-toggle {
+            width: 100%;
+            padding: 12px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            color: #22c55e;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .control-btn.start {
@@ -543,6 +556,100 @@
         .test-mode-banner.active {
             display: block;
         }
+
+        /* Map View */
+        .map-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0a0e1a;
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+        }
+
+        .map-view.active {
+            display: flex;
+        }
+
+        .map-header {
+            padding: max(20px, env(safe-area-inset-top)) 20px 16px;
+            background: rgba(10, 14, 26, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .map-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .map-close {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            color: #ef4444;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-canvas {
+            width: 100%;
+            height: 100%;
+            background: #1e293b;
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .map-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            font-size: 11px;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -598,6 +705,9 @@
                     <span>Test</span>
                 </button>
             </div>
+            <button class="map-toggle" id="mapToggle">
+                🗺️ View Map
+            </button>
         </div>
     </div>
 
@@ -616,6 +726,35 @@
         </div>
     </div>
 
+    <!-- Map View -->
+    <div class="map-view" id="mapView">
+        <div class="map-header">
+            <div class="map-title">Bridge Map</div>
+            <button class="map-close" id="mapClose">Close</button>
+        </div>
+        <div class="map-container">
+            <canvas class="map-canvas" id="mapCanvas"></canvas>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #60a5fa;"></div>
+                    <span>Your Location</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Too Low (Alert)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #22c55e;"></div>
+                    <span>Safe Clearance</span>
+                </div>
+            </div>
+            <div class="map-info" id="mapInfo">
+                <div>Zoom: <span id="mapZoom">1.0</span>x</div>
+                <div>Range: <span id="mapRange">5</span> mi</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let vehicleHeight = 13.6;
         let watchId = null;
@@ -625,6 +764,10 @@
         let currentHeading = null;
         let previousPosition = null;
         let bridgeAlertHistory = {};
+        let lastCheckTime = 0;
+        const CHECK_THROTTLE = 2000; // Check every 2 seconds
+        let headingHistory = [];
+        const HEADING_HISTORY_SIZE = 5;
 
         const testLocations = [
             { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
@@ -637,26 +780,22 @@
         let currentTestLocation = 0;
 
         const bridges = [
-            // VERIFIED REAL BRIDGES - Confirmed via Google Maps satellite view
+            // VERIFIED REAL BRIDGES - Set to 13ft for testing alerts
             
-            // 1. BALBOA BLVD OVER 101 - Your verified bridge
-            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 15.4, location: 'Encino, CA' },
+            // 1. BALBOA BLVD OVER 101 - Your verified bridge (Real: 15.4ft)
+            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA' },
             
-            // 2. BURBANK BLVD OVER 405 - Your correction
-            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 14.0, location: 'Sherman Oaks, CA' },
+            // 2. BURBANK BLVD OVER 405 - Your correction (Real: 14.0ft)
+            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA' },
             
-            // 3. COLDWATER CANYON OVER 101 - Your correction
-            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 14.0, location: 'Studio City, CA' },
+            // 3. COLDWATER CANYON OVER 101 - Your correction (Real: 14.0ft)
+            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA' },
             
-            // 4. VENTURA BLVD UNDER 405 - Your correction (15 ft bridge - you pass daily!)
-            { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 15.0, location: 'Sherman Oaks, CA' },
+            // 4. VENTURA BLVD UNDER 405 - Your correction (Real: 15.0ft - you pass daily!)
+            { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA' },
             
-            // 5. HAYVENHURST AVE OVER 405 - Your correction (15'6" bridge)
-            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 15.5, location: 'Encino, CA' },
-            
-            // TEST BRIDGES - Set low clearance to trigger alerts for testing
-            { id: 'TEST-BALBOA-LOW', name: 'TEST: Balboa Bridge (13.0ft)', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Test - Encino, CA' },
-            { id: 'TEST-VENTURA-LOW', name: 'TEST: Ventura/405 Bridge (13.0ft)', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Test - Sherman Oaks, CA' }
+            // 5. HAYVENHURST AVE OVER 405 - Your correction (Real: 15.5ft)
+            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA' }
         ];
 
         // DOM Elements
@@ -677,6 +816,14 @@
         const heightInput = document.getElementById('heightInput');
         const cancelBtn = document.getElementById('cancelBtn');
         const saveBtn = document.getElementById('saveBtn');
+        const mapToggle = document.getElementById('mapToggle');
+        const mapView = document.getElementById('mapView');
+        const mapClose = document.getElementById('mapClose');
+        const mapCanvas = document.getElementById('mapCanvas');
+        const mapZoom = document.getElementById('mapZoom');
+        const mapRange = document.getElementById('mapRange');
+        const ctx = mapCanvas.getContext('2d');
+        let mapScale = 1.0;
 
         // Vehicle Settings
         editVehicleBtn.addEventListener('click', () => {
@@ -696,6 +843,51 @@
                 vehicleModal.classList.remove('active');
                 if (isMonitoring) checkAlerts();
             }
+        });
+
+        // Map Controls
+        mapToggle.addEventListener('click', () => {
+            if (!currentPosition) {
+                alert('Start monitoring first to view map');
+                return;
+            }
+            mapView.classList.add('active');
+            drawMap();
+        });
+
+        mapClose.addEventListener('click', () => {
+            mapView.classList.remove('active');
+        });
+
+        // Map zoom with pinch/scroll
+        let touchDistance = 0;
+        mapCanvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                touchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        });
+
+        mapCanvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const newDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const delta = newDistance - touchDistance;
+                mapScale = Math.max(0.5, Math.min(5, mapScale + delta * 0.01));
+                touchDistance = newDistance;
+                drawMap();
+            }
+        });
+
+        mapCanvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            mapScale = Math.max(0.5, Math.min(5, mapScale - e.deltaY * 0.001));
+            drawMap();
         });
 
         function updateVehicleDisplay() {
@@ -730,6 +922,7 @@
             isMonitoring = true;
             isTestMode = false;
             bridgeAlertHistory = {};
+            headingHistory = [];
             updateUI();
         }
 
@@ -744,6 +937,7 @@
             currentHeading = null;
             previousPosition = null;
             bridgeAlertHistory = {};
+            headingHistory = [];
             updateUI();
         }
 
@@ -752,6 +946,7 @@
             isMonitoring = true;
             currentTestLocation = 0;
             bridgeAlertHistory = {};
+            headingHistory = [];
             simulateLocation(testLocations[currentTestLocation]);
             updateUI();
         }
@@ -760,6 +955,7 @@
             if (!isTestMode) return;
             currentTestLocation = (currentTestLocation + 1) % testLocations.length;
             bridgeAlertHistory = {};
+            headingHistory = [];
             simulateLocation(testLocations[currentTestLocation]);
         }
 
@@ -773,6 +969,7 @@
             };
 
             currentHeading = location.heading;
+            addHeadingToHistory(currentHeading);
 
             gpsCoords.textContent = `${location.name}`;
             gpsHeading.textContent = `Heading: ${currentHeading}° ${getCardinalDirection(currentHeading)}`;
@@ -791,17 +988,23 @@
                 accuracy: position.coords.accuracy
             };
 
-            // Get heading from GPS if available, otherwise calculate from movement
-            if (position.coords.heading !== null && position.coords.heading !== undefined) {
-                currentHeading = position.coords.heading;
+            // Improved heading detection with smoothing
+            if (position.coords.heading !== null && position.coords.heading !== undefined && position.coords.speed > 1) {
+                // Use GPS heading if moving (speed > 1 m/s)
+                addHeadingToHistory(position.coords.heading);
             } else if (previousPosition) {
-                currentHeading = calculateBearing(
+                // Calculate from movement
+                const calcHeading = calculateBearing(
                     previousPosition.latitude,
                     previousPosition.longitude,
                     currentPosition.latitude,
                     currentPosition.longitude
                 );
+                addHeadingToHistory(calcHeading);
             }
+
+            // Use smoothed heading
+            currentHeading = getSmoothedHeading();
 
             gpsCoords.textContent = `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
             
@@ -814,7 +1017,34 @@
             gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
             gpsInfo.classList.add('active');
 
-            checkAlerts();
+            // Throttle alert checks for performance
+            const now = Date.now();
+            if (now - lastCheckTime >= CHECK_THROTTLE) {
+                checkAlerts();
+                lastCheckTime = now;
+            }
+        }
+
+        function addHeadingToHistory(heading) {
+            headingHistory.push(heading);
+            if (headingHistory.length > HEADING_HISTORY_SIZE) {
+                headingHistory.shift();
+            }
+        }
+
+        function getSmoothedHeading() {
+            if (headingHistory.length === 0) return null;
+            
+            // Convert to vectors to handle 359° to 1° transition
+            let sumX = 0, sumY = 0;
+            for (const heading of headingHistory) {
+                const rad = toRadians(heading);
+                sumX += Math.cos(rad);
+                sumY += Math.sin(rad);
+            }
+            
+            const avgRad = Math.atan2(sumY / headingHistory.length, sumX / headingHistory.length);
+            return (toDegrees(avgRad) + 360) % 360;
         }
 
         function onPositionError(error) {
@@ -846,7 +1076,10 @@
         }
 
         function isHeadingTowards(bearing, heading, tolerance = 90) {
-            if (heading === null) return true; // If no heading data, show all alerts
+            if (heading === null || headingHistory.length < 3) {
+                // Need stable heading before filtering
+                return true;
+            }
             
             let diff = Math.abs(bearing - heading);
             if (diff > 180) diff = 360 - diff;
@@ -1013,6 +1246,129 @@
                 `;
             }
         }
+
+        function drawMap() {
+            if (!currentPosition) return;
+
+            // Set canvas size
+            mapCanvas.width = mapCanvas.offsetWidth * window.devicePixelRatio;
+            mapCanvas.height = mapCanvas.offsetHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const width = mapCanvas.offsetWidth;
+            const height = mapCanvas.offsetHeight;
+
+            // Clear
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calculate map bounds (5 miles = 0.0725 degrees lat/lon approx)
+            const range = 5 / mapScale; // miles
+            const degreeRange = range * 0.0145; // rough conversion
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Convert lat/lon to screen coordinates
+            function toScreen(lat, lon) {
+                const dx = (lon - currentPosition.longitude) / degreeRange;
+                const dy = (currentPosition.latitude - lat) / degreeRange;
+                return {
+                    x: centerX + dx * (width / 2),
+                    y: centerY + dy * (height / 2)
+                };
+            }
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = -5; i <= 5; i++) {
+                const offset = i * (width / 10);
+                ctx.beginPath();
+                ctx.moveTo(centerX + offset, 0);
+                ctx.lineTo(centerX + offset, height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, centerY + offset);
+                ctx.lineTo(width, centerY + offset);
+                ctx.stroke();
+            }
+
+            // Draw bridges
+            for (const bridge of bridges) {
+                const distance = calculateDistance(
+                    currentPosition.latitude,
+                    currentPosition.longitude,
+                    bridge.lat,
+                    bridge.lon
+                );
+
+                if (distance > range) continue;
+
+                const pos = toScreen(bridge.lat, bridge.lon);
+                const isTooLow = vehicleHeight > bridge.clearance;
+                
+                // Draw bridge
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = isTooLow ? '#ef4444' : '#22c55e';
+                ctx.fill();
+                ctx.strokeStyle = isTooLow ? '#fca5a5' : '#86efac';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw distance
+                ctx.fillStyle = 'white';
+                ctx.font = '10px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${distance.toFixed(1)}mi`, pos.x, pos.y + 20);
+            }
+
+            // Draw heading indicator
+            if (currentHeading !== null) {
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(toRadians(currentHeading));
+                
+                ctx.beginPath();
+                ctx.moveTo(0, -30);
+                ctx.lineTo(-10, -10);
+                ctx.lineTo(0, -15);
+                ctx.lineTo(10, -10);
+                ctx.closePath();
+                ctx.fillStyle = '#60a5fa';
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            // Draw your location
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#60a5fa';
+            ctx.fill();
+            ctx.strokeStyle = '#93c5fd';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Inner dot
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            // Update info
+            mapZoom.textContent = mapScale.toFixed(1);
+            mapRange.textContent = range.toFixed(1);
+        }
+
+        // Redraw map when window resizes
+        window.addEventListener('resize', () => {
+            if (mapView.classList.contains('active')) {
+                drawMap();
+            }
+        });
     </script>
 </body>
 </html>
