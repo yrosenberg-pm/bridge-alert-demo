@@ -759,8 +759,8 @@
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 10;
-        const HEADING_CHANGE_THRESHOLD = 5;
+        const HEADING_HISTORY_SIZE = 5; // Reduced from 10 to 5 for faster response
+        const HEADING_CHANGE_THRESHOLD = 5; // Degrees - reduced from 15 to 5
         let headingWatchId = null;
 
         const testLocations = [
@@ -992,9 +992,11 @@
 
             let newHeading = null;
             
-            if (position.coords.heading !== null && position.coords.heading !== undefined && position.coords.speed > 1) {
+            // Accept heading from GPS regardless of speed
+            if (position.coords.heading !== null && position.coords.heading !== undefined) {
                 newHeading = position.coords.heading;
-            } else if (previousPosition && position.coords.speed > 0.5) {
+            } else if (previousPosition) {
+                // Calculate from movement
                 newHeading = calculateBearing(
                     previousPosition.latitude,
                     previousPosition.longitude,
@@ -1004,12 +1006,7 @@
             }
 
             if (newHeading !== null) {
-                if (headingHistory.length === 0 || isSignificantHeadingChange(newHeading, currentHeading)) {
-                    addHeadingToHistory(newHeading);
-                } else {
-                    addHeadingToHistory(currentHeading || newHeading);
-                }
-                
+                addHeadingToHistory(newHeading);
                 currentHeading = getSmoothedHeading();
             }
 
@@ -1025,15 +1022,18 @@
         function onDeviceOrientation(event) {
             if (isTestMode || !currentPosition) return;
             
+            let compassHeading = null;
+            
             if (event.webkitCompassHeading !== undefined) {
-                const compassHeading = event.webkitCompassHeading;
-                addHeadingToHistory(compassHeading);
-                currentHeading = getSmoothedHeading();
-                updateGPSDisplay();
+                // iOS
+                compassHeading = event.webkitCompassHeading;
             } else if (event.alpha !== null) {
-                let compassHeading = 360 - event.alpha;
+                // Android
+                compassHeading = 360 - event.alpha;
                 if (compassHeading >= 360) compassHeading -= 360;
-                
+            }
+            
+            if (compassHeading !== null) {
                 addHeadingToHistory(compassHeading);
                 currentHeading = getSmoothedHeading();
                 updateGPSDisplay();
@@ -1118,7 +1118,8 @@
         }
 
         function isHeadingTowards(bearing, heading, tolerance = 90) {
-            if (heading === null || headingHistory.length < 5) {
+            if (heading === null || headingHistory.length < 2) {
+                // Reduced from 5 to 2 - start filtering sooner
                 return true;
             }
             
@@ -1251,12 +1252,14 @@
             if (isMonitoring) {
                 if (isTestMode) {
                     controlBtn.className = 'control-btn stop';
-                    controlBtn.innerHTML = '<div class="spinner"></div><span>Test Active</span>';
+                    controlBtn.innerHTML = '<span>Stop Test</span>';
+                    controlBtn.disabled = false;
                     testBtn.innerHTML = '<span>Next Location</span>';
                     testModeBanner.classList.add('active');
                 } else {
                     controlBtn.className = 'control-btn stop';
-                    controlBtn.innerHTML = '<div class="spinner"></div><span>Monitoring</span>';
+                    controlBtn.innerHTML = '<span>Stop Monitoring</span>';
+                    controlBtn.disabled = false;
                     testBtn.innerHTML = '<span>Test</span>';
                     testModeBanner.classList.remove('active');
                 }
@@ -1266,6 +1269,7 @@
             } else {
                 controlBtn.className = 'control-btn start';
                 controlBtn.innerHTML = '<span>Start Monitoring</span>';
+                controlBtn.disabled = false;
                 testBtn.innerHTML = '<span>Test</span>';
                 statusDot.classList.remove('active');
                 statusText.classList.remove('active');
