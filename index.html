@@ -1,14 +1,4 @@
-.edit-btn {
-            padding: 6px 12px;
-            background: rgba(96, 165, 250, 0.2);
-            border: 1px solid rgba(96, 165, 250, 0.3);
-            border-radius: 8px;
-            color: #60a5fa;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -129,6 +119,18 @@
             font-size: 13px;
             color: #94a3b8;
             font-weight: 500;
+        }
+
+        .edit-btn {
+            padding: 6px 12px;
+            background: rgba(96, 165, 250, 0.2);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 8px;
+            color: #60a5fa;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
         }
 
         /* Vehicle Settings Modal */
@@ -749,10 +751,10 @@
         let previousPosition = null;
         let bridgeAlertHistory = {};
         let lastCheckTime = 0;
-        const CHECK_THROTTLE = 2000; // Check every 2 seconds
+        const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 10; // Increased from 5 to 10
-        const HEADING_CHANGE_THRESHOLD = 5; // Degrees - reduced from 15 to 5
+        const HEADING_HISTORY_SIZE = 10;
+        const HEADING_CHANGE_THRESHOLD = 5;
         let headingWatchId = null;
 
         const testLocations = [
@@ -766,21 +768,10 @@
         let currentTestLocation = 0;
 
         const bridges = [
-            // VERIFIED REAL BRIDGES - Set to 13ft for testing alerts
-            
-            // 1. BALBOA BLVD OVER 101 - Your verified bridge (Real: 15.4ft)
             { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA' },
-            
-            // 2. BURBANK BLVD OVER 405 - Your correction (Real: 14.0ft)
             { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA' },
-            
-            // 3. COLDWATER CANYON OVER 101 - Your correction (Real: 14.0ft)
             { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA' },
-            
-            // 4. VENTURA BLVD UNDER 405 - Your correction (Real: 15.0ft - you pass daily!)
             { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA' },
-            
-            // 5. HAYVENHURST AVE OVER 405 - Your correction (Real: 15.5ft)
             { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA' }
         ];
 
@@ -846,7 +837,6 @@
             console.log('Map view classes:', mapView.classList);
             console.log('Map view display:', window.getComputedStyle(mapView).display);
             
-            // Give the view time to render before drawing
             setTimeout(() => {
                 console.log('Drawing map after timeout...');
                 drawMap();
@@ -911,14 +901,12 @@
                 return;
             }
 
-            // Watch position for location updates
             watchId = navigator.geolocation.watchPosition(
                 onPositionUpdate,
                 onPositionError,
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
 
-            // Start orientation/heading monitoring if available
             if (window.DeviceOrientationEvent) {
                 window.addEventListener('deviceorientation', onDeviceOrientation);
             }
@@ -936,7 +924,6 @@
                 watchId = null;
             }
             
-            // Stop orientation monitoring
             window.removeEventListener('deviceorientation', onDeviceOrientation);
             
             isMonitoring = false;
@@ -997,14 +984,11 @@
                 speed: position.coords.speed || 0
             };
 
-            // Improved heading detection with better smoothing
             let newHeading = null;
             
             if (position.coords.heading !== null && position.coords.heading !== undefined && position.coords.speed > 1) {
-                // Use GPS heading if moving fast enough (speed > 1 m/s = ~2.2 mph)
                 newHeading = position.coords.heading;
             } else if (previousPosition && position.coords.speed > 0.5) {
-                // Calculate from movement if moving slowly
                 newHeading = calculateBearing(
                     previousPosition.latitude,
                     previousPosition.longitude,
@@ -1013,23 +997,18 @@
                 );
             }
 
-            // Only add to history if we have a valid heading and it's significantly different
             if (newHeading !== null) {
                 if (headingHistory.length === 0 || isSignificantHeadingChange(newHeading, currentHeading)) {
                     addHeadingToHistory(newHeading);
                 } else {
-                    // Still add but weight towards stability
                     addHeadingToHistory(currentHeading || newHeading);
                 }
                 
-                // Update current heading
                 currentHeading = getSmoothedHeading();
             }
 
-            // Update GPS display immediately
             updateGPSDisplay();
 
-            // Throttle alert checks for performance
             const now = Date.now();
             if (now - lastCheckTime >= CHECK_THROTTLE) {
                 checkAlerts();
@@ -1038,26 +1017,15 @@
         }
 
         function onDeviceOrientation(event) {
-            // Only use device orientation if we're not in test mode and not moving fast
             if (isTestMode || !currentPosition) return;
             
-            // Get compass heading from device orientation
-            // alpha is the compass heading (0-360 degrees)
             if (event.webkitCompassHeading !== undefined) {
-                // iOS
                 const compassHeading = event.webkitCompassHeading;
                 addHeadingToHistory(compassHeading);
                 currentHeading = getSmoothedHeading();
                 updateGPSDisplay();
             } else if (event.alpha !== null) {
-                // Android - need to calculate compass heading
-                const alpha = event.alpha;
-                const beta = event.beta;
-                const gamma = event.gamma;
-                
-                // Convert to compass heading (this is a simplified version)
-                // For production, you'd want a more robust calculation
-                let compassHeading = 360 - alpha;
+                let compassHeading = 360 - event.alpha;
                 if (compassHeading >= 360) compassHeading -= 360;
                 
                 addHeadingToHistory(compassHeading);
@@ -1090,32 +1058,6 @@
             return diff >= HEADING_CHANGE_THRESHOLD;
         }
 
-        function addHeadingToHistory(heading) {
-            headingHistory.push(heading);
-            if (headingHistory.length > HEADING_HISTORY_SIZE) {
-                headingHistory.shift();
-            }
-        }
-
-        function getSmoothedHeading() {
-            if (headingHistory.length === 0) return null;
-            
-            // Use weighted average - more recent headings have more weight
-            let sumX = 0, sumY = 0, totalWeight = 0;
-            
-            for (let i = 0; i < headingHistory.length; i++) {
-                const heading = headingHistory[i];
-                const weight = (i + 1) / headingHistory.length; // More weight to recent
-                const rad = toRadians(heading);
-                sumX += Math.cos(rad) * weight;
-                sumY += Math.sin(rad) * weight;
-                totalWeight += weight;
-            }
-            
-            const avgRad = Math.atan2(sumY / totalWeight, sumX / totalWeight);
-            return (toDegrees(avgRad) + 360) % 360;
-        }
-
         function onPositionError(error) {
             console.error('GPS Error:', error);
         }
@@ -1144,9 +1086,33 @@
             return directions[index];
         }
 
+        function addHeadingToHistory(heading) {
+            headingHistory.push(heading);
+            if (headingHistory.length > HEADING_HISTORY_SIZE) {
+                headingHistory.shift();
+            }
+        }
+
+        function getSmoothedHeading() {
+            if (headingHistory.length === 0) return null;
+            
+            let sumX = 0, sumY = 0, totalWeight = 0;
+            
+            for (let i = 0; i < headingHistory.length; i++) {
+                const heading = headingHistory[i];
+                const weight = (i + 1) / headingHistory.length;
+                const rad = toRadians(heading);
+                sumX += Math.cos(rad) * weight;
+                sumY += Math.sin(rad) * weight;
+                totalWeight += weight;
+            }
+            
+            const avgRad = Math.atan2(sumY / totalWeight, sumX / totalWeight);
+            return (toDegrees(avgRad) + 360) % 360;
+        }
+
         function isHeadingTowards(bearing, heading, tolerance = 90) {
             if (heading === null || headingHistory.length < 5) {
-                // Need more stable heading before filtering (increased from 3 to 5)
                 return true;
             }
             
@@ -1167,7 +1133,6 @@
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
                 const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
-                // Only alert if vehicle is too tall AND heading towards bridge
                 if (vehicleHeight > bridge.clearance && isHeadingTowards(bearing, currentHeading)) {
                     let level = null;
                     if (distance <= 0.5) level = 'critical';
@@ -1175,11 +1140,9 @@
                     else if (distance <= 2.0) level = 'caution';
 
                     if (level) {
-                        // Check if we've already alerted for this bridge recently
                         const lastAlert = bridgeAlertHistory[bridge.id];
                         const lastDistance = lastAlert?.distance || Infinity;
                         
-                        // Only add alert if distance is decreasing (getting closer)
                         if (!lastAlert || distance < lastDistance) {
                             alerts.push({
                                 bridge,
@@ -1189,7 +1152,6 @@
                                 bearing: Math.round(bearing)
                             });
                             
-                            // Update history
                             bridgeAlertHistory[bridge.id] = {
                                 distance: distance,
                                 timestamp: now
@@ -1197,12 +1159,10 @@
                         }
                     }
                 } else {
-                    // Clear history if we're no longer approaching
                     delete bridgeAlertHistory[bridge.id];
                 }
             }
 
-            // Clean up old history entries (older than 5 minutes)
             for (const id in bridgeAlertHistory) {
                 if (now - bridgeAlertHistory[id].timestamp > 300000) {
                     delete bridgeAlertHistory[id];
@@ -1324,7 +1284,6 @@
 
             console.log('Drawing map for position:', currentPosition.latitude, currentPosition.longitude);
 
-            // Set canvas size to match container
             const rect = mapCanvas.getBoundingClientRect();
             const displayWidth = rect.width;
             const displayHeight = rect.height;
@@ -1332,21 +1291,16 @@
             
             console.log('Canvas dimensions:', displayWidth, 'x', displayHeight, 'DPR:', dpr);
             
-            // Set actual canvas size (accounting for device pixel ratio)
             mapCanvas.width = displayWidth * dpr;
             mapCanvas.height = displayHeight * dpr;
             
-            // Scale context to account for device pixel ratio
-            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(dpr, dpr);
 
-            // Clear canvas with dark background
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-            // Calculate map bounds
-            const range = 5 / mapScale; // miles
-            // More accurate degree conversion for LA area (34° latitude)
+            const range = 5 / mapScale;
             const milesPerDegreeLat = 69.0;
             const milesPerDegreeLon = 69.0 * Math.cos(toRadians(currentPosition.latitude));
             
@@ -1356,7 +1310,6 @@
             console.log('Map center:', centerX, centerY, 'Range:', range, 'miles');
             console.log('Miles per degree: lat=', milesPerDegreeLat, 'lon=', milesPerDegreeLon);
 
-            // Convert lat/lon to screen coordinates
             function toScreen(lat, lon) {
                 const latDiff = lat - currentPosition.latitude;
                 const lonDiff = lon - currentPosition.longitude;
@@ -1364,45 +1317,56 @@
                 const latMiles = latDiff * milesPerDegreeLat;
                 const lonMiles = lonDiff * milesPerDegreeLon;
                 
-                // Scale to fit within range
                 const scale = Math.min(displayWidth, displayHeight) / (range * 2);
                 
                 return {
                     x: centerX + (lonMiles * scale),
-                    y: centerY - (latMiles * scale) // Negative because canvas Y increases downward
+                    y: centerY - (latMiles * scale)
                 };
             }
 
-            // Draw grid lines
-            ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
-            ctx.lineWidth = 1;
-            const gridSpacing = displayWidth / 10;
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+            ctx.lineWidth = 2;
+            const scale = Math.min(displayWidth, displayHeight) / (range * 2);
             
-            for (let i = -5; i <= 5; i++) {
-                // Vertical lines
+            for (let r = 1; r <= 5; r++) {
+                const radius = r * scale;
                 ctx.beginPath();
-                ctx.moveTo(centerX + i * gridSpacing, 0);
-                ctx.lineTo(centerX + i * gridSpacing, displayHeight);
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                 ctx.stroke();
                 
-                // Horizontal lines
-                ctx.beginPath();
-                ctx.moveTo(0, centerY + i * gridSpacing);
-                ctx.lineTo(displayWidth, centerY + i * gridSpacing);
-                ctx.stroke();
+                ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+                ctx.font = '11px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${r}mi`, centerX, centerY - radius + 15);
             }
 
-            // Draw center crosshair for debugging
-            ctx.strokeStyle = 'rgba(96, 165, 250, 0.3)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            
             ctx.beginPath();
-            ctx.moveTo(centerX - 20, centerY);
-            ctx.lineTo(centerX + 20, centerY);
-            ctx.moveTo(centerX, centerY - 20);
-            ctx.lineTo(centerX, centerY + 20);
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, displayHeight);
             ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(displayWidth, centerY);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
 
-            // Draw bridges
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+            ctx.font = 'bold 14px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('N', centerX, 25);
+            ctx.fillText('S', centerX, displayHeight - 10);
+            ctx.textAlign = 'left';
+            ctx.fillText('E', displayWidth - 25, centerY + 5);
+            ctx.textAlign = 'right';
+            ctx.fillText('W', 25, centerY + 5);
+
             let bridgesDrawn = 0;
             let bridgesInRange = [];
             
@@ -1427,7 +1391,6 @@
                 
                 console.log(`Bridge ${bridge.name}: distance=${distance.toFixed(2)}mi, pos=(${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}), onScreen=${pos.x >= 0 && pos.x <= displayWidth && pos.y >= 0 && pos.y <= displayHeight}`);
                 
-                // Draw line from center to bridge
                 ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
@@ -1437,42 +1400,35 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
                 
-                // Draw bridge icon (looks like a bridge structure)
                 ctx.fillStyle = isTooLow ? '#ef4444' : '#22c55e';
                 ctx.strokeStyle = isTooLow ? '#fca5a5' : '#86efac';
                 ctx.lineWidth = 3;
                 
-                // Bridge structure
                 ctx.beginPath();
                 ctx.rect(pos.x - 15, pos.y - 6, 30, 12);
                 ctx.fill();
                 ctx.stroke();
                 
-                // Bridge pillars
                 ctx.fillStyle = isTooLow ? '#dc2626' : '#16a34a';
                 ctx.fillRect(pos.x - 12, pos.y - 6, 4, 12);
                 ctx.fillRect(pos.x + 8, pos.y - 6, 4, 12);
 
-                // Draw bridge name and info
-                const bridgeName = bridge.name.split(' over ')[0]; // Shorter name
+                const bridgeName = bridge.name.split(' over ')[0];
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
                 const labelWidth = Math.max(80, ctx.measureText(bridgeName).width + 20);
                 const labelHeight = 40;
                 ctx.fillRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
                 
-                // Border
                 ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
                 
-                // Bridge name
                 ctx.fillStyle = 'white';
                 ctx.font = 'bold 11px system-ui';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 ctx.fillText(bridgeName, pos.x, pos.y + 20);
                 
-                // Distance
                 ctx.fillStyle = '#94a3b8';
                 ctx.font = '10px system-ui';
                 ctx.fillText(`${distance.toFixed(1)} mi • ${bridge.clearance}' clearance`, pos.x, pos.y + 35);
@@ -1482,13 +1438,11 @@
 
             console.log('Drew', bridgesDrawn, 'bridges on canvas');
 
-            // Draw heading indicator arrow
             if (currentHeading !== null) {
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(toRadians(currentHeading));
                 
-                // Arrow
                 ctx.beginPath();
                 ctx.moveTo(0, -40);
                 ctx.lineTo(-14, -14);
@@ -1504,7 +1458,6 @@
                 ctx.restore();
             }
 
-            // Draw your location (outer circle)
             ctx.beginPath();
             ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
             ctx.fillStyle = '#3b82f6';
@@ -1513,20 +1466,17 @@
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // Inner white dot
             ctx.beginPath();
             ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
             ctx.fillStyle = 'white';
             ctx.fill();
 
-            // Update info display
             mapZoom.textContent = mapScale.toFixed(1);
             mapRange.textContent = range.toFixed(1);
             
             console.log('Map drawing complete');
         }
 
-        // Redraw map when window resizes
         window.addEventListener('resize', () => {
             if (mapView.classList.contains('active')) {
                 requestAnimationFrame(drawMap);
