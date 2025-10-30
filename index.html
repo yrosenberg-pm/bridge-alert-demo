@@ -40,6 +40,10 @@
             flex-shrink: 0;
         }
 
+        .header.with-banner {
+            padding-top: 20px;
+        }
+
         .brand {
             font-size: 28px;
             font-weight: 800;
@@ -539,17 +543,14 @@
 
         /* Test Mode Indicator */
         .test-mode-banner {
-            position: fixed;
-            top: env(safe-area-inset-top);
-            left: 0;
-            right: 0;
-            background: rgba(168, 85, 247, 0.9);
             padding: 8px;
+            background: rgba(168, 85, 247, 0.9);
             text-align: center;
             font-size: 12px;
             font-weight: 700;
             z-index: 100;
             display: none;
+            flex-shrink: 0;
         }
 
         .test-mode-banner.active {
@@ -661,7 +662,7 @@
     </div>
 
     <div class="container">
-        <div class="header">
+        <div class="header" id="header">
             <div class="brand">Road Warrior</div>
             <div class="tagline">Bridge Clearance Alert System</div>
             <div class="status-bar">
@@ -803,6 +804,7 @@
         const gpsAccuracy = document.getElementById('gpsAccuracy');
         const alertsSection = document.getElementById('alertsSection');
         const testModeBanner = document.getElementById('testModeBanner');
+        const header = document.getElementById('header');
         const vehicleSpec = document.getElementById('vehicleSpec');
         const editVehicleBtn = document.getElementById('editVehicleBtn');
         const vehicleModal = document.getElementById('vehicleModal');
@@ -1342,12 +1344,14 @@
                     controlBtn.disabled = false;
                     testBtn.innerHTML = '<span>Next Location</span>';
                     testModeBanner.classList.add('active');
+                    header.classList.add('with-banner');
                 } else {
                     controlBtn.className = 'control-btn stop';
                     controlBtn.innerHTML = '<span>Stop Monitoring</span>';
                     controlBtn.disabled = false;
                     testBtn.innerHTML = '<span>Test</span>';
                     testModeBanner.classList.remove('active');
+                    header.classList.remove('with-banner');
                 }
                 statusDot.classList.add('active');
                 statusText.classList.add('active');
@@ -1362,6 +1366,7 @@
                 statusText.textContent = 'Inactive';
                 gpsInfo.classList.remove('active');
                 testModeBanner.classList.remove('active');
+                header.classList.remove('with-banner');
                 alertsSection.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">✓</div>
