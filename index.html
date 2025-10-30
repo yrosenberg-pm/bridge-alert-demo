@@ -202,6 +202,14 @@
             color: white;
             font-size: 16px;
             font-weight: 600;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(0, 0, 0, 0.5);
         }
 
         .modal-buttons {
@@ -218,6 +226,11 @@
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.95);
         }
 
         .modal-btn.primary {
@@ -669,7 +682,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v2.1</div>
+            <div class="version">v2.2</div>
         </div>
 
         <div class="vehicle-card">
@@ -836,11 +849,25 @@
 
         saveBtn.addEventListener('click', () => {
             const newHeight = parseFloat(heightInput.value);
+            console.log('Save clicked, new height:', newHeight);
             if (newHeight >= 8 && newHeight <= 16) {
                 vehicleHeight = newHeight;
+                console.log('Vehicle height updated to:', vehicleHeight);
                 updateVehicleDisplay();
                 vehicleModal.classList.remove('active');
-                if (isMonitoring) checkAlerts();
+                if (isMonitoring) {
+                    console.log('Rechecking alerts...');
+                    checkAlerts();
+                }
+            } else {
+                alert('Please enter a height between 8 and 16 feet');
+            }
+        });
+
+        // Allow closing modal by clicking outside
+        vehicleModal.addEventListener('click', (e) => {
+            if (e.target === vehicleModal) {
+                vehicleModal.classList.remove('active');
             }
         });
 
