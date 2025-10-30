@@ -571,7 +571,7 @@
             right: 0;
             bottom: 0;
             background: #0a0e1a;
-            z-index: 500;
+            z-index: 1000;
             display: none;
             flex-direction: column;
         }
@@ -587,6 +587,8 @@
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            flex-shrink: 0;
+            z-index: 1001;
         }
 
         .map-title {
@@ -609,12 +611,14 @@
             flex: 1;
             position: relative;
             overflow: hidden;
+            background: #1e293b;
         }
 
         .map-canvas {
             width: 100%;
             height: 100%;
-            background: #1e293b;
+            background: #0f172a;
+            touch-action: none;
         }
 
         .map-legend {
@@ -773,7 +777,8 @@
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000; // Check every 2 seconds
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 5;
+        const HEADING_HISTORY_SIZE = 10; // Increased from 5 to 10
+        const HEADING_CHANGE_THRESHOLD = 15; // Degrees - ignore small changes
 
         const testLocations = [
             { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
@@ -853,13 +858,23 @@
 
         // Map Controls
         mapToggle.addEventListener('click', () => {
+            console.log('Map toggle clicked');
+            console.log('Current position:', currentPosition);
+            console.log('Is monitoring:', isMonitoring);
+            
             if (!currentPosition) {
                 alert('Start monitoring first to view map');
                 return;
             }
+            
+            console.log('Opening map view...');
             mapView.classList.add('active');
+            console.log('Map view classes:', mapView.classList);
+            console.log('Map view display:', window.getComputedStyle(mapView).display);
+            
             // Give the view time to render before drawing
             setTimeout(() => {
+                console.log('Drawing map after timeout...');
                 drawMap();
             }, 100);
         });
@@ -994,22 +1009,34 @@
             currentPosition = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy
+                accuracy: position.coords.accuracy,
+                speed: position.coords.speed || 0
             };
 
-            // Improved heading detection with smoothing
+            // Improved heading detection with better smoothing
+            let newHeading = null;
+            
             if (position.coords.heading !== null && position.coords.heading !== undefined && position.coords.speed > 1) {
-                // Use GPS heading if moving (speed > 1 m/s)
-                addHeadingToHistory(position.coords.heading);
-            } else if (previousPosition) {
-                // Calculate from movement
-                const calcHeading = calculateBearing(
+                // Use GPS heading if moving fast enough (speed > 1 m/s = ~2.2 mph)
+                newHeading = position.coords.heading;
+            } else if (previousPosition && position.coords.speed > 0.5) {
+                // Calculate from movement if moving slowly
+                newHeading = calculateBearing(
                     previousPosition.latitude,
                     previousPosition.longitude,
                     currentPosition.latitude,
                     currentPosition.longitude
                 );
-                addHeadingToHistory(calcHeading);
+            }
+
+            // Only add to history if we have a valid heading and it's significantly different
+            if (newHeading !== null) {
+                if (headingHistory.length === 0 || isSignificantHeadingChange(newHeading, currentHeading)) {
+                    addHeadingToHistory(newHeading);
+                } else {
+                    // Still add but weight towards stability
+                    addHeadingToHistory(currentHeading || newHeading);
+                }
             }
 
             // Use smoothed heading
@@ -1034,6 +1061,15 @@
             }
         }
 
+        function isSignificantHeadingChange(newHeading, oldHeading) {
+            if (oldHeading === null) return true;
+            
+            let diff = Math.abs(newHeading - oldHeading);
+            if (diff > 180) diff = 360 - diff;
+            
+            return diff >= HEADING_CHANGE_THRESHOLD;
+        }
+
         function addHeadingToHistory(heading) {
             headingHistory.push(heading);
             if (headingHistory.length > HEADING_HISTORY_SIZE) {
@@ -1044,15 +1080,19 @@
         function getSmoothedHeading() {
             if (headingHistory.length === 0) return null;
             
-            // Convert to vectors to handle 359° to 1° transition
-            let sumX = 0, sumY = 0;
-            for (const heading of headingHistory) {
+            // Use weighted average - more recent headings have more weight
+            let sumX = 0, sumY = 0, totalWeight = 0;
+            
+            for (let i = 0; i < headingHistory.length; i++) {
+                const heading = headingHistory[i];
+                const weight = (i + 1) / headingHistory.length; // More weight to recent
                 const rad = toRadians(heading);
-                sumX += Math.cos(rad);
-                sumY += Math.sin(rad);
+                sumX += Math.cos(rad) * weight;
+                sumY += Math.sin(rad) * weight;
+                totalWeight += weight;
             }
             
-            const avgRad = Math.atan2(sumY / headingHistory.length, sumX / headingHistory.length);
+            const avgRad = Math.atan2(sumY / totalWeight, sumX / totalWeight);
             return (toDegrees(avgRad) + 360) % 360;
         }
 
@@ -1085,8 +1125,8 @@
         }
 
         function isHeadingTowards(bearing, heading, tolerance = 90) {
-            if (heading === null || headingHistory.length < 3) {
-                // Need stable heading before filtering
+            if (heading === null || headingHistory.length < 5) {
+                // Need more stable heading before filtering (increased from 3 to 5)
                 return true;
             }
             
@@ -1262,11 +1302,15 @@
                 return;
             }
 
+            console.log('Drawing map for position:', currentPosition.latitude, currentPosition.longitude);
+
             // Set canvas size to match container
             const rect = mapCanvas.getBoundingClientRect();
             const displayWidth = rect.width;
             const displayHeight = rect.height;
             const dpr = window.devicePixelRatio || 1;
+            
+            console.log('Canvas dimensions:', displayWidth, 'x', displayHeight, 'DPR:', dpr);
             
             // Set actual canvas size (accounting for device pixel ratio)
             mapCanvas.width = displayWidth * dpr;
@@ -1276,44 +1320,72 @@
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
             ctx.scale(dpr, dpr);
 
-            // Clear canvas
-            ctx.fillStyle = '#1e293b';
+            // Clear canvas with dark background
+            ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, displayWidth, displayHeight);
 
             // Calculate map bounds
             const range = 5 / mapScale; // miles
-            const degreeRange = range * 0.0145; // rough conversion
-
+            // More accurate degree conversion for LA area (34° latitude)
+            const milesPerDegreeLat = 69.0;
+            const milesPerDegreeLon = 69.0 * Math.cos(toRadians(currentPosition.latitude));
+            
             const centerX = displayWidth / 2;
             const centerY = displayHeight / 2;
 
+            console.log('Map center:', centerX, centerY, 'Range:', range, 'miles');
+            console.log('Miles per degree: lat=', milesPerDegreeLat, 'lon=', milesPerDegreeLon);
+
             // Convert lat/lon to screen coordinates
             function toScreen(lat, lon) {
-                const dx = (lon - currentPosition.longitude) / degreeRange;
-                const dy = (currentPosition.latitude - lat) / degreeRange;
+                const latDiff = lat - currentPosition.latitude;
+                const lonDiff = lon - currentPosition.longitude;
+                
+                const latMiles = latDiff * milesPerDegreeLat;
+                const lonMiles = lonDiff * milesPerDegreeLon;
+                
+                // Scale to fit within range
+                const scale = Math.min(displayWidth, displayHeight) / (range * 2);
+                
                 return {
-                    x: centerX + dx * (displayWidth / 2),
-                    y: centerY + dy * (displayHeight / 2)
+                    x: centerX + (lonMiles * scale),
+                    y: centerY - (latMiles * scale) // Negative because canvas Y increases downward
                 };
             }
 
-            // Draw grid
-            ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
             ctx.lineWidth = 1;
+            const gridSpacing = displayWidth / 10;
+            
             for (let i = -5; i <= 5; i++) {
-                const offset = i * (displayWidth / 10);
+                // Vertical lines
                 ctx.beginPath();
-                ctx.moveTo(centerX + offset, 0);
-                ctx.lineTo(centerX + offset, displayHeight);
+                ctx.moveTo(centerX + i * gridSpacing, 0);
+                ctx.lineTo(centerX + i * gridSpacing, displayHeight);
                 ctx.stroke();
                 
+                // Horizontal lines
                 ctx.beginPath();
-                ctx.moveTo(0, centerY + offset);
-                ctx.lineTo(displayWidth, centerY + offset);
+                ctx.moveTo(0, centerY + i * gridSpacing);
+                ctx.lineTo(displayWidth, centerY + i * gridSpacing);
                 ctx.stroke();
             }
 
+            // Draw center crosshair for debugging
+            ctx.strokeStyle = 'rgba(96, 165, 250, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 20, centerY);
+            ctx.lineTo(centerX + 20, centerY);
+            ctx.moveTo(centerX, centerY - 20);
+            ctx.lineTo(centerX, centerY + 20);
+            ctx.stroke();
+
             // Draw bridges
+            let bridgesDrawn = 0;
+            let bridgesInRange = [];
+            
             for (const bridge of bridges) {
                 const distance = calculateDistance(
                     currentPosition.latitude,
@@ -1322,27 +1394,73 @@
                     bridge.lon
                 );
 
-                if (distance > range) continue;
-
+                if (distance <= range) {
+                    bridgesInRange.push({ bridge, distance });
+                }
+            }
+            
+            console.log('Bridges in range:', bridgesInRange.length, 'of', bridges.length);
+            
+            for (const { bridge, distance } of bridgesInRange) {
                 const pos = toScreen(bridge.lat, bridge.lon);
                 const isTooLow = vehicleHeight > bridge.clearance;
                 
-                // Draw bridge circle
+                console.log(`Bridge ${bridge.name}: distance=${distance.toFixed(2)}mi, pos=(${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}), onScreen=${pos.x >= 0 && pos.x <= displayWidth && pos.y >= 0 && pos.y <= displayHeight}`);
+                
+                // Draw line from center to bridge
+                ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw bridge icon (looks like a bridge structure)
                 ctx.fillStyle = isTooLow ? '#ef4444' : '#22c55e';
-                ctx.fill();
                 ctx.strokeStyle = isTooLow ? '#fca5a5' : '#86efac';
                 ctx.lineWidth = 3;
+                
+                // Bridge structure
+                ctx.beginPath();
+                ctx.rect(pos.x - 15, pos.y - 6, 30, 12);
+                ctx.fill();
                 ctx.stroke();
+                
+                // Bridge pillars
+                ctx.fillStyle = isTooLow ? '#dc2626' : '#16a34a';
+                ctx.fillRect(pos.x - 12, pos.y - 6, 4, 12);
+                ctx.fillRect(pos.x + 8, pos.y - 6, 4, 12);
 
-                // Draw distance label
+                // Draw bridge name and info
+                const bridgeName = bridge.name.split(' over ')[0]; // Shorter name
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                const labelWidth = Math.max(80, ctx.measureText(bridgeName).width + 20);
+                const labelHeight = 40;
+                ctx.fillRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
+                
+                // Border
+                ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
+                
+                // Bridge name
                 ctx.fillStyle = 'white';
                 ctx.font = 'bold 11px system-ui';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
-                ctx.fillText(`${distance.toFixed(1)}mi`, pos.x, pos.y + 16);
+                ctx.fillText(bridgeName, pos.x, pos.y + 20);
+                
+                // Distance
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px system-ui';
+                ctx.fillText(`${distance.toFixed(1)} mi • ${bridge.clearance}' clearance`, pos.x, pos.y + 35);
+                
+                bridgesDrawn++;
             }
+
+            console.log('Drew', bridgesDrawn, 'bridges on canvas');
 
             // Draw heading indicator arrow
             if (currentHeading !== null) {
@@ -1350,11 +1468,12 @@
                 ctx.translate(centerX, centerY);
                 ctx.rotate(toRadians(currentHeading));
                 
+                // Arrow
                 ctx.beginPath();
-                ctx.moveTo(0, -35);
-                ctx.lineTo(-12, -12);
-                ctx.lineTo(0, -18);
-                ctx.lineTo(12, -12);
+                ctx.moveTo(0, -40);
+                ctx.lineTo(-14, -14);
+                ctx.lineTo(0, -20);
+                ctx.lineTo(14, -14);
                 ctx.closePath();
                 ctx.fillStyle = '#60a5fa';
                 ctx.fill();
@@ -1365,10 +1484,10 @@
                 ctx.restore();
             }
 
-            // Draw your location (main circle)
+            // Draw your location (outer circle)
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
-            ctx.fillStyle = '#60a5fa';
+            ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+            ctx.fillStyle = '#3b82f6';
             ctx.fill();
             ctx.strokeStyle = '#93c5fd';
             ctx.lineWidth = 4;
@@ -1376,13 +1495,15 @@
 
             // Inner white dot
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
             ctx.fillStyle = 'white';
             ctx.fill();
 
             // Update info display
             mapZoom.textContent = mapScale.toFixed(1);
             mapRange.textContent = range.toFixed(1);
+            
+            console.log('Map drawing complete');
         }
 
         // Redraw map when window resizes
