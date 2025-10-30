@@ -273,9 +273,11 @@
         .alerts-section {
             flex: 1;
             overflow-y: auto;
-            padding: 0 20px 20px;
+            padding: 0 20px;
+            padding-bottom: 20px;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
+            margin-bottom: 140px; /* Space for control buttons */
         }
 
         .alerts-section::-webkit-scrollbar {
@@ -288,7 +290,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            min-height: 300px;
+            padding: 40px 20px;
             text-align: center;
             opacity: 0.6;
         }
@@ -460,11 +463,14 @@
 
         /* Control Area */
         .control-area {
-            padding: 16px 20px calc(80px + env(safe-area-inset-bottom));
+            padding: 16px 20px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
             background: linear-gradient(0deg, rgba(10, 14, 26, 0.98) 0%, rgba(10, 14, 26, 0) 100%);
             flex-shrink: 0;
-            position: sticky;
+            position: fixed;
             bottom: 0;
+            left: 0;
+            right: 0;
             z-index: 20;
         }
 
@@ -852,7 +858,10 @@
                 return;
             }
             mapView.classList.add('active');
-            drawMap();
+            // Give the view time to render before drawing
+            setTimeout(() => {
+                drawMap();
+            }, 100);
         });
 
         mapClose.addEventListener('click', () => {
@@ -880,14 +889,14 @@
                 const delta = newDistance - touchDistance;
                 mapScale = Math.max(0.5, Math.min(5, mapScale + delta * 0.01));
                 touchDistance = newDistance;
-                drawMap();
+                requestAnimationFrame(drawMap);
             }
         });
 
         mapCanvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             mapScale = Math.max(0.5, Math.min(5, mapScale - e.deltaY * 0.001));
-            drawMap();
+            requestAnimationFrame(drawMap);
         });
 
         function updateVehicleDisplay() {
@@ -1248,50 +1257,59 @@
         }
 
         function drawMap() {
-            if (!currentPosition) return;
+            if (!currentPosition) {
+                console.log('No position available for map');
+                return;
+            }
 
-            // Set canvas size
-            mapCanvas.width = mapCanvas.offsetWidth * window.devicePixelRatio;
-            mapCanvas.height = mapCanvas.offsetHeight * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            // Set canvas size to match container
+            const rect = mapCanvas.getBoundingClientRect();
+            const displayWidth = rect.width;
+            const displayHeight = rect.height;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set actual canvas size (accounting for device pixel ratio)
+            mapCanvas.width = displayWidth * dpr;
+            mapCanvas.height = displayHeight * dpr;
+            
+            // Scale context to account for device pixel ratio
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+            ctx.scale(dpr, dpr);
 
-            const width = mapCanvas.offsetWidth;
-            const height = mapCanvas.offsetHeight;
-
-            // Clear
+            // Clear canvas
             ctx.fillStyle = '#1e293b';
-            ctx.fillRect(0, 0, width, height);
+            ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-            // Calculate map bounds (5 miles = 0.0725 degrees lat/lon approx)
+            // Calculate map bounds
             const range = 5 / mapScale; // miles
             const degreeRange = range * 0.0145; // rough conversion
 
-            const centerX = width / 2;
-            const centerY = height / 2;
+            const centerX = displayWidth / 2;
+            const centerY = displayHeight / 2;
 
             // Convert lat/lon to screen coordinates
             function toScreen(lat, lon) {
                 const dx = (lon - currentPosition.longitude) / degreeRange;
                 const dy = (currentPosition.latitude - lat) / degreeRange;
                 return {
-                    x: centerX + dx * (width / 2),
-                    y: centerY + dy * (height / 2)
+                    x: centerX + dx * (displayWidth / 2),
+                    y: centerY + dy * (displayHeight / 2)
                 };
             }
 
             // Draw grid
-            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
             ctx.lineWidth = 1;
             for (let i = -5; i <= 5; i++) {
-                const offset = i * (width / 10);
+                const offset = i * (displayWidth / 10);
                 ctx.beginPath();
                 ctx.moveTo(centerX + offset, 0);
-                ctx.lineTo(centerX + offset, height);
+                ctx.lineTo(centerX + offset, displayHeight);
                 ctx.stroke();
                 
                 ctx.beginPath();
                 ctx.moveTo(0, centerY + offset);
-                ctx.lineTo(width, centerY + offset);
+                ctx.lineTo(displayWidth, centerY + offset);
                 ctx.stroke();
             }
 
@@ -1309,56 +1327,60 @@
                 const pos = toScreen(bridge.lat, bridge.lon);
                 const isTooLow = vehicleHeight > bridge.clearance;
                 
-                // Draw bridge
+                // Draw bridge circle
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
                 ctx.fillStyle = isTooLow ? '#ef4444' : '#22c55e';
                 ctx.fill();
                 ctx.strokeStyle = isTooLow ? '#fca5a5' : '#86efac';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 3;
                 ctx.stroke();
 
-                // Draw distance
+                // Draw distance label
                 ctx.fillStyle = 'white';
-                ctx.font = '10px system-ui';
+                ctx.font = 'bold 11px system-ui';
                 ctx.textAlign = 'center';
-                ctx.fillText(`${distance.toFixed(1)}mi`, pos.x, pos.y + 20);
+                ctx.textBaseline = 'top';
+                ctx.fillText(`${distance.toFixed(1)}mi`, pos.x, pos.y + 16);
             }
 
-            // Draw heading indicator
+            // Draw heading indicator arrow
             if (currentHeading !== null) {
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(toRadians(currentHeading));
                 
                 ctx.beginPath();
-                ctx.moveTo(0, -30);
-                ctx.lineTo(-10, -10);
-                ctx.lineTo(0, -15);
-                ctx.lineTo(10, -10);
+                ctx.moveTo(0, -35);
+                ctx.lineTo(-12, -12);
+                ctx.lineTo(0, -18);
+                ctx.lineTo(12, -12);
                 ctx.closePath();
                 ctx.fillStyle = '#60a5fa';
                 ctx.fill();
+                ctx.strokeStyle = '#93c5fd';
+                ctx.lineWidth = 2;
+                ctx.stroke();
                 
                 ctx.restore();
             }
 
-            // Draw your location
+            // Draw your location (main circle)
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
             ctx.fillStyle = '#60a5fa';
             ctx.fill();
             ctx.strokeStyle = '#93c5fd';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.stroke();
 
-            // Inner dot
+            // Inner white dot
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
             ctx.fillStyle = 'white';
             ctx.fill();
 
-            // Update info
+            // Update info display
             mapZoom.textContent = mapScale.toFixed(1);
             mapRange.textContent = range.toFixed(1);
         }
@@ -1366,7 +1388,7 @@
         // Redraw map when window resizes
         window.addEventListener('resize', () => {
             if (mapView.classList.contains('active')) {
-                drawMap();
+                requestAnimationFrame(drawMap);
             }
         });
     </script>
