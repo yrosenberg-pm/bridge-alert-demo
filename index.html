@@ -939,6 +939,8 @@
             previousPosition = null;
             bridgeAlertHistory = {};
             headingHistory = [];
+            headingStableCount = 0;
+            headingLocked = false;
             updateUI();
         }
 
@@ -1006,6 +1008,12 @@
             }
 
             if (newHeading !== null) {
+                // If moving, unlock heading and update
+                if (position.coords.speed > 0.5) {
+                    headingLocked = false;
+                    headingStableCount = 0;
+                }
+                
                 addHeadingToHistory(newHeading);
                 currentHeading = getSmoothedHeading();
             }
@@ -1039,9 +1047,33 @@
             }
             
             if (compassHeading !== null) {
-                addHeadingToHistory(compassHeading);
-                currentHeading = getSmoothedHeading();
-                updateGPSDisplay();
+                // Check if heading has stabilized
+                if (currentHeading !== null) {
+                    let diff = Math.abs(compassHeading - currentHeading);
+                    if (diff > 180) diff = 360 - diff;
+                    
+                    if (diff < 2) {
+                        // Heading is stable (less than 2 degrees change)
+                        headingStableCount++;
+                        
+                        if (headingStableCount >= HEADING_STABLE_THRESHOLD) {
+                            // Lock the heading - stop updating
+                            headingLocked = true;
+                            return;
+                        }
+                    } else if (diff > 10) {
+                        // Significant change detected - unlock and reset
+                        headingLocked = false;
+                        headingStableCount = 0;
+                    }
+                }
+                
+                // Only update if not locked
+                if (!headingLocked) {
+                    addHeadingToHistory(compassHeading);
+                    currentHeading = getSmoothedHeading();
+                    updateGPSDisplay();
+                }
             }
         }
 
