@@ -231,8 +231,8 @@
             background: rgba(30, 41, 59, 0.4);
             border-radius: 16px;
             display: none;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 8px;
             border: 1px solid rgba(71, 85, 105, 0.3);
             flex-shrink: 0;
         }
@@ -241,11 +241,23 @@
             display: flex;
         }
 
+        .gps-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .gps-coords {
             font-size: 12px;
             font-weight: 600;
             color: #94a3b8;
             font-family: 'Courier New', monospace;
+        }
+
+        .gps-heading {
+            font-size: 11px;
+            font-weight: 600;
+            color: #60a5fa;
         }
 
         .gps-accuracy {
@@ -557,8 +569,13 @@
         </div>
 
         <div class="gps-info" id="gpsInfo">
-            <div class="gps-coords" id="gpsCoords">---.------, ---.------</div>
-            <div class="gps-accuracy" id="gpsAccuracy">GPS</div>
+            <div class="gps-row">
+                <div class="gps-coords" id="gpsCoords">---.------, ---.------</div>
+                <div class="gps-accuracy" id="gpsAccuracy">GPS</div>
+            </div>
+            <div class="gps-row">
+                <div class="gps-heading" id="gpsHeading">Heading: ---°</div>
+            </div>
         </div>
 
         <div class="alerts-section" id="alertsSection">
@@ -602,57 +619,41 @@
         let isMonitoring = false;
         let isTestMode = false;
         let currentPosition = null;
+        let currentHeading = null;
+        let previousPosition = null;
+        let bridgeAlertHistory = {};
 
         const testLocations = [
-            { name: 'Sherman Oaks - Ventura/405', lat: 34.1510, lon: -118.4705 },
-            { name: 'Sherman Oaks - Sepulveda/101', lat: 34.1545, lon: -118.4655 },
-            { name: 'Encino - Balboa/101', lat: 34.1542, lon: -118.5023 },
-            { name: 'Studio City - Coldwater/101', lat: 34.1455, lon: -118.4138 },
-            { name: 'Studio City - Whitsett/101', lat: 34.1425, lon: -118.4075 },
-            { name: 'Sepulveda Pass - Mulholland/405', lat: 34.0988, lon: -118.4514 }
+            { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
+            { name: 'Sherman Oaks - Ventura/405 ✅', lat: 34.15411722543085, lon: -118.46800838166973, heading: 0 },
+            { name: 'Sherman Oaks - Burbank/405 ✅', lat: 34.172153559602314, lon: -118.46768567630716, heading: 270 },
+            { name: 'Studio City - Coldwater/101 ✅', lat: 34.15674619828743, lon: -118.41376835430795, heading: 180 },
+            { name: 'West LA - I-10 Bridge ✅', lat: 34.0282723148279, lon: -118.44925192140647, heading: 90 },
+            { name: 'Encino - Hayvenhurst/405 ✅', lat: 34.186652156787154, lon: -118.47418816016183, heading: 90 }
         ];
         let currentTestLocation = 0;
 
         const bridges = [
-            // SANTA MONICA / VENICE / CULVER CITY AREA (5 bridges)
-            { id: 'SM-PCH-INCLINE-001', name: 'PCH/California Incline Underpass', lat: 34.0157, lon: -118.4965, clearance: 13.2, location: 'Santa Monica, CA' },
-            { id: 'VE-LINCOLN-VENICE-001', name: 'Lincoln Blvd at Venice Blvd', lat: 34.0054, lon: -118.4490, clearance: 14.0, location: 'Venice, CA' },
-            { id: 'CC-EXPO-CULVER-001', name: 'Expo Line Underpass at Culver Blvd', lat: 34.0165, lon: -118.3967, clearance: 13.1, location: 'Culver City, CA' },
-            { id: 'MDR-LINCOLN-BALLONA-001', name: 'Lincoln Blvd over Ballona Creek', lat: 33.9798, lon: -118.4423, clearance: 14.5, location: 'Marina Del Rey, CA' },
-            { id: 'VE-WASHINGTON-UNDER-001', name: 'Washington Blvd Service Road', lat: 34.0021, lon: -118.4388, clearance: 12.9, location: 'Venice, CA' },
+            // VERIFIED REAL BRIDGES - Confirmed via Google Maps satellite view
             
-            // SHERMAN OAKS AREA (7 bridges)
-            { id: 'SO-101-SEPULVEDA-001', name: 'Sepulveda Blvd over 101', lat: 34.1545, lon: -118.4655, clearance: 14.0, location: 'Sherman Oaks, CA' },
-            { id: 'SO-405-VENTURA-001', name: 'Ventura Blvd over 405', lat: 34.1510, lon: -118.4705, clearance: 13.2, location: 'Sherman Oaks, CA' },
-            { id: 'SO-101-VANNUYS-001', name: 'Van Nuys Blvd over 101', lat: 34.1520, lon: -118.4485, clearance: 13.8, location: 'Sherman Oaks, CA' },
-            { id: 'SO-101-KESTER-001', name: 'Kester Ave under 101', lat: 34.1535, lon: -118.4580, clearance: 13.1, location: 'Sherman Oaks, CA' },
-            { id: 'SO-101-SEPULVEDA-002', name: 'Sepulveda Blvd over 101 (South)', lat: 34.1495, lon: -118.4650, clearance: 13.5, location: 'Sherman Oaks, CA' },
-            { id: 'SO-405-MOORPARK-001', name: 'Moorpark St Service Road', lat: 34.1640, lon: -118.4720, clearance: 12.9, location: 'Sherman Oaks, CA' },
-            { id: 'SO-405-BURBANK-001', name: 'Burbank Blvd over 405', lat: 34.1680, lon: -118.4750, clearance: 13.4, location: 'Sherman Oaks, CA' },
+            // 1. BALBOA BLVD OVER 101 - Your verified bridge
+            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 15.4, location: 'Encino, CA' },
             
-            // ENCINO AREA (6 bridges)
-            { id: 'EN-101-BALBOA-001', name: 'Balboa Blvd over 101', lat: 34.1542, lon: -118.5023, clearance: 13.3, location: 'Encino, CA' },
-            { id: 'EN-101-HAYVENHURST-001', name: 'Hayvenhurst Ave over 101', lat: 34.1548, lon: -118.4895, clearance: 13.2, location: 'Encino, CA' },
-            { id: 'EN-101-WHITEOAK-001', name: 'White Oak Ave over 101', lat: 34.1555, lon: -118.5150, clearance: 13.5, location: 'Encino, CA' },
-            { id: 'EN-101-RESEDA-001', name: 'Reseda Blvd over 101', lat: 34.1560, lon: -118.5365, clearance: 13.8, location: 'Encino, CA' },
-            { id: 'EN-101-LINDLEY-001', name: 'Lindley Ave over 101', lat: 34.1565, lon: -118.5245, clearance: 13.4, location: 'Encino, CA' },
-            { id: 'EN-101-LOUISE-001', name: 'Louise Ave Service Road', lat: 34.1525, lon: -118.4980, clearance: 12.8, location: 'Encino, CA' },
+            // 2. BURBANK BLVD OVER 405 - Your correction
+            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 14.0, location: 'Sherman Oaks, CA' },
             
-            // STUDIO CITY AREA (6 bridges)
-            { id: 'SC-101-COLDWATER-001', name: 'Coldwater Canyon over 101', lat: 34.1455, lon: -118.4138, clearance: 13.0, location: 'Studio City, CA' },
-            { id: 'SC-101-LAUREL-001', name: 'Laurel Canyon Blvd over 101', lat: 34.1397, lon: -118.3963, clearance: 13.2, location: 'Studio City, CA' },
-            { id: 'SC-101-WHITSETT-001', name: 'Whitsett Ave under 101', lat: 34.1425, lon: -118.4075, clearance: 12.7, location: 'Studio City, CA' },
-            { id: 'SC-101-COLFAX-001', name: 'Colfax Ave Service Road', lat: 34.1440, lon: -118.4000, clearance: 13.1, location: 'Studio City, CA' },
-            { id: 'SC-101-TUJUNGA-001', name: 'Tujunga Ave over 101', lat: 34.1380, lon: -118.3850, clearance: 13.5, location: 'Studio City, CA' },
-            { id: 'SC-101-LANKERSHIM-001', name: 'Lankershim Blvd over 101', lat: 34.1365, lon: -118.3880, clearance: 13.4, location: 'Studio City, CA' },
+            // 3. COLDWATER CANYON OVER 101 - Your correction
+            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 14.0, location: 'Studio City, CA' },
             
-            // 405 CORRIDOR (6 bridges)
-            { id: 'LA-405-MULHOLLAND-001', name: 'Mulholland Dr over 405 (Sepulveda Pass)', lat: 34.0988, lon: -118.4514, clearance: 13.3, location: 'Los Angeles, CA' },
-            { id: 'LA-405-SUNSET-001', name: 'Sunset Blvd over 405', lat: 34.0791, lon: -118.4448, clearance: 13.5, location: 'Bel Air, CA' },
-            { id: 'LA-405-GETTY-001', name: 'Getty Center Dr over 405', lat: 34.0801, lon: -118.4417, clearance: 14.2, location: 'Brentwood, CA' },
-            { id: 'VN-405-VICTORY-001', name: 'Victory Blvd over 405', lat: 34.1876, lon: -118.4779, clearance: 13.4, location: 'Van Nuys, CA' },
-            { id: 'VN-405-SHERMAN-001', name: 'Sherman Way over 405', lat: 34.2010, lon: -118.4790, clearance: 14.0, location: 'Van Nuys, CA' },
-            { id: 'VN-405-ROSCOE-001', name: 'Roscoe Blvd over 405', lat: 34.2198, lon: -118.4800, clearance: 14.5, location: 'Van Nuys, CA' }
+            // 4. VENTURA BLVD UNDER 405 - Your correction (15 ft bridge - you pass daily!)
+            { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 15.0, location: 'Sherman Oaks, CA' },
+            
+            // 5. HAYVENHURST AVE OVER 405 - Your correction (15'6" bridge)
+            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 15.5, location: 'Encino, CA' },
+            
+            // TEST BRIDGES - Set low clearance to trigger alerts for testing
+            { id: 'TEST-BALBOA-LOW', name: 'TEST: Balboa Bridge (13.0ft)', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Test - Encino, CA' },
+            { id: 'TEST-VENTURA-LOW', name: 'TEST: Ventura/405 Bridge (13.0ft)', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Test - Sherman Oaks, CA' }
         ];
 
         // DOM Elements
@@ -662,6 +663,7 @@
         const statusText = document.getElementById('statusText');
         const gpsInfo = document.getElementById('gpsInfo');
         const gpsCoords = document.getElementById('gpsCoords');
+        const gpsHeading = document.getElementById('gpsHeading');
         const gpsAccuracy = document.getElementById('gpsAccuracy');
         const alertsSection = document.getElementById('alertsSection');
         const testModeBanner = document.getElementById('testModeBanner');
@@ -724,6 +726,7 @@
 
             isMonitoring = true;
             isTestMode = false;
+            bridgeAlertHistory = {};
             updateUI();
         }
 
@@ -735,6 +738,9 @@
             isMonitoring = false;
             isTestMode = false;
             currentPosition = null;
+            currentHeading = null;
+            previousPosition = null;
+            bridgeAlertHistory = {};
             updateUI();
         }
 
@@ -742,6 +748,7 @@
             isTestMode = true;
             isMonitoring = true;
             currentTestLocation = 0;
+            bridgeAlertHistory = {};
             simulateLocation(testLocations[currentTestLocation]);
             updateUI();
         }
@@ -749,17 +756,23 @@
         function cycleTestLocation() {
             if (!isTestMode) return;
             currentTestLocation = (currentTestLocation + 1) % testLocations.length;
+            bridgeAlertHistory = {};
             simulateLocation(testLocations[currentTestLocation]);
         }
 
         function simulateLocation(location) {
+            previousPosition = currentPosition;
+            
             currentPosition = {
                 latitude: location.lat,
                 longitude: location.lon,
                 accuracy: 10
             };
 
+            currentHeading = location.heading;
+
             gpsCoords.textContent = `${location.name}`;
+            gpsHeading.textContent = `Heading: ${currentHeading}° ${getCardinalDirection(currentHeading)}`;
             gpsAccuracy.textContent = `TEST`;
             gpsInfo.classList.add('active');
 
@@ -767,13 +780,34 @@
         }
 
         function onPositionUpdate(position) {
+            previousPosition = currentPosition;
+            
             currentPosition = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy
             };
 
+            // Get heading from GPS if available, otherwise calculate from movement
+            if (position.coords.heading !== null && position.coords.heading !== undefined) {
+                currentHeading = position.coords.heading;
+            } else if (previousPosition) {
+                currentHeading = calculateBearing(
+                    previousPosition.latitude,
+                    previousPosition.longitude,
+                    currentPosition.latitude,
+                    currentPosition.longitude
+                );
+            }
+
             gpsCoords.textContent = `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
+            
+            if (currentHeading !== null) {
+                gpsHeading.textContent = `Heading: ${Math.round(currentHeading)}° ${getCardinalDirection(currentHeading)}`;
+            } else {
+                gpsHeading.textContent = `Heading: Calculating...`;
+            }
+            
             gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
             gpsInfo.classList.add('active');
 
@@ -784,29 +818,89 @@
             console.error('GPS Error:', error);
         }
 
+        function calculateBearing(lat1, lon1, lat2, lon2) {
+            const dLon = toRadians(lon2 - lon1);
+            const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
+            const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
+                      Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
+            const bearing = toDegrees(Math.atan2(y, x));
+            return (bearing + 360) % 360;
+        }
+
+        function toRadians(degrees) {
+            return degrees * Math.PI / 180;
+        }
+
+        function toDegrees(radians) {
+            return radians * 180 / Math.PI;
+        }
+
+        function getCardinalDirection(heading) {
+            if (heading === null) return '';
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(((heading % 360) / 45)) % 8;
+            return directions[index];
+        }
+
+        function isHeadingTowards(bearing, heading, tolerance = 90) {
+            if (heading === null) return true; // If no heading data, show all alerts
+            
+            let diff = Math.abs(bearing - heading);
+            if (diff > 180) diff = 360 - diff;
+            
+            return diff <= tolerance;
+        }
+
         function checkAlerts() {
             if (!currentPosition) return;
 
             const alerts = [];
             const { latitude, longitude } = currentPosition;
+            const now = Date.now();
 
             for (const bridge of bridges) {
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
+                const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
-                if (vehicleHeight > bridge.clearance) {
+                // Only alert if vehicle is too tall AND heading towards bridge
+                if (vehicleHeight > bridge.clearance && isHeadingTowards(bearing, currentHeading)) {
                     let level = null;
                     if (distance <= 0.5) level = 'critical';
                     else if (distance <= 1.0) level = 'warning';
                     else if (distance <= 2.0) level = 'caution';
 
                     if (level) {
-                        alerts.push({
-                            bridge,
-                            distance,
-                            level,
-                            diff: vehicleHeight - bridge.clearance
-                        });
+                        // Check if we've already alerted for this bridge recently
+                        const lastAlert = bridgeAlertHistory[bridge.id];
+                        const lastDistance = lastAlert?.distance || Infinity;
+                        
+                        // Only add alert if distance is decreasing (getting closer)
+                        if (!lastAlert || distance < lastDistance) {
+                            alerts.push({
+                                bridge,
+                                distance,
+                                level,
+                                diff: vehicleHeight - bridge.clearance,
+                                bearing: Math.round(bearing)
+                            });
+                            
+                            // Update history
+                            bridgeAlertHistory[bridge.id] = {
+                                distance: distance,
+                                timestamp: now
+                            };
+                        }
                     }
+                } else {
+                    // Clear history if we're no longer approaching
+                    delete bridgeAlertHistory[bridge.id];
+                }
+            }
+
+            // Clean up old history entries (older than 5 minutes)
+            for (const id in bridgeAlertHistory) {
+                if (now - bridgeAlertHistory[id].timestamp > 300000) {
+                    delete bridgeAlertHistory[id];
                 }
             }
 
@@ -830,7 +924,7 @@
                     <div class="empty-state">
                         <div class="empty-icon">✓</div>
                         <div class="empty-title">All Clear</div>
-                        <div class="empty-subtitle">No bridge alerts detected</div>
+                        <div class="empty-subtitle">No bridge alerts ahead</div>
                     </div>
                 `;
                 return;
@@ -851,11 +945,11 @@
                             <div class="alert-badge">${alert.level}</div>
                             <div class="alert-distance">
                                 <div class="distance-value">${alert.distance.toFixed(1)}</div>
-                                <div class="distance-label">Miles</div>
+                                <div class="distance-label">Miles Ahead</div>
                             </div>
                         </div>
                         <div class="bridge-name">${alert.bridge.name}</div>
-                        <div class="bridge-location">${alert.bridge.location}</div>
+                        <div class="bridge-location">${alert.bridge.location} • Bearing: ${alert.bearing}°</div>
                         <div class="clearance-grid">
                             <div class="clearance-box">
                                 <div class="clearance-label">Bridge</div>
