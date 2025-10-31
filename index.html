@@ -682,14 +682,14 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v2.2</div>
+            <div class="version">v2.3</div>
         </div>
 
         <div class="vehicle-card">
             <div class="vehicle-info">
                 <div>
                     <div class="vehicle-type">Class 8 Truck</div>
-                    <div class="vehicle-spec" id="vehicleSpec">Height: 13.6 feet</div>
+                    <div class="vehicle-spec" id="vehicleSpec">Height: 15.0 feet</div>
                 </div>
             </div>
             <button class="edit-btn" id="editVehicleBtn">Edit</button>
@@ -734,7 +734,7 @@
             <div class="modal-header">Vehicle Settings</div>
             <div class="input-group">
                 <label class="input-label">Height (feet)</label>
-                <input type="number" class="input-field" id="heightInput" step="0.1" min="8" max="16">
+                <input type="number" class="input-field" id="heightInput" step="0.1" min="0">
             </div>
             <div class="modal-buttons">
                 <button class="modal-btn secondary" id="cancelBtn">Cancel</button>
@@ -773,7 +773,7 @@
     </div>
 
     <script>
-        let vehicleHeight = 13.6;
+        let vehicleHeight = 15.0;
         let watchId = null;
         let isMonitoring = false;
         let isTestMode = false;
@@ -800,14 +800,16 @@
 
         const bridges = [
             // LA AREA BRIDGES - Set to 13ft for testing alerts
-            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA' },
-            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA' },
-            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA' },
-            { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA' },
-            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA' },
+            // type: 'underpass' = you drive under it (clearance matters)
+            // type: 'overpass' = bridge goes over freeway below you (ignore)
+            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
+            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass' },
+            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA', type: 'overpass' },
+            { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass' },
+            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
             
             // DALLAS AREA BRIDGES
-            { id: 'DAL-BRIDGE-001', name: 'Dallas Bridge', lat: 32.999500454468176, lon: -96.76771981164418, clearance: 16.75, location: 'Dallas, TX' }
+            { id: 'DAL-BRIDGE-001', name: 'Dallas Bridge', lat: 32.999500454468176, lon: -96.76771981164418, clearance: 16.75, location: 'Dallas, TX', type: 'underpass' }
         ];
 
         // DOM Elements
@@ -850,7 +852,7 @@
         saveBtn.addEventListener('click', () => {
             const newHeight = parseFloat(heightInput.value);
             console.log('Save clicked, new height:', newHeight);
-            if (newHeight >= 8 && newHeight <= 16) {
+            if (!isNaN(newHeight) && newHeight > 0) {
                 vehicleHeight = newHeight;
                 console.log('Vehicle height updated to:', vehicleHeight);
                 updateVehicleDisplay();
@@ -860,7 +862,7 @@
                     checkAlerts();
                 }
             } else {
-                alert('Please enter a height between 8 and 16 feet');
+                alert('Please enter a valid height in feet');
             }
         });
 
@@ -1256,9 +1258,13 @@
             const now = Date.now();
 
             for (const bridge of bridges) {
+                // Skip bridges that are overpasses (below the freeway)
+                if (bridge.type === 'overpass') continue;
+                
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
                 const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
+                // Only alert if vehicle is too tall AND heading towards bridge
                 if (vehicleHeight > bridge.clearance && isHeadingTowards(bearing, currentHeading)) {
                     let level = null;
                     if (distance <= 0.5) level = 'critical';
@@ -1269,6 +1275,7 @@
                         const lastAlert = bridgeAlertHistory[bridge.id];
                         const lastDistance = lastAlert?.distance || Infinity;
                         
+                        // Only add alert if distance is decreasing (getting closer)
                         if (!lastAlert || distance < lastDistance) {
                             alerts.push({
                                 bridge,
@@ -1289,6 +1296,7 @@
                 }
             }
 
+            // Clean up old history entries (older than 5 minutes)
             for (const id in bridgeAlertHistory) {
                 if (now - bridgeAlertHistory[id].timestamp > 300000) {
                     delete bridgeAlertHistory[id];
