@@ -1,46 +1,13 @@
-function onDeviceOrientation(event) {
-            // Get compass heading from device for real-time compass display
-            let compassHeading = null;
-            
-            if (event.webkitCompassHeading !== undefined) {
-                // iOS - provides true heading
-                compassHeading = event.webkitCompassHeading;
-            } else if (event.alpha !== null) {
-                // Android - calculate from alpha
-                compassHeading = 360 - event.alpha;
-                if (compassHeading >= 360) compassHeading -= 360;
-            }
-            
-            if (compassHeading !== null) {
-                deviceHeading = compassHeading;
-                
-                // Update compass display in real-time
-                updateCompassDisplay();
-            }
-        }
-
-        function updateCompassDisplay() {
-            // Update all compass widgets on screen
-            const compassRoses = document.querySelectorAll('.compass-rose');
-            const headingArrows = document.querySelectorAll('.compass-heading-arrow');
-            
-            // Use device compass if available, otherwise use GPS heading
-            const displayHeading = deviceHeading !== null ? deviceHeading : (currentHeading || 0);
-            
-            compassRoses.forEach(rose => {
-                rose.style.transform = `rotate(${-displayHeading}deg)`;
-            });
-            
-            headingArrows.forEach(arrow => {
-                arrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
-            });
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Road Warrior">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/htYFfJvb/image.png">
+    <link rel="icon" href="https://i.postimg.cc/htYFfJvb/image.png">
     <title>Road Warrior - Bridge Alert System</title>
     <style>
         * {
@@ -950,8 +917,9 @@ function onDeviceOrientation(event) {
         let headingLocked = false;
         let positionHistory = [];
         const POSITION_HISTORY_SIZE = 5;
-        let deviceHeading = null; // Real-time compass heading from device
-        let useDeviceCompass = true; // Use device compass for display
+        let deviceHeading = null;
+        let useDeviceCompass = true;
+        let lastHapticAlert = {};
 
         const testLocations = [
             { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
@@ -1045,7 +1013,6 @@ function onDeviceOrientation(event) {
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
 
-            // Start device orientation for compass display
             if (window.DeviceOrientationEvent) {
                 window.addEventListener('deviceorientation', onDeviceOrientation);
             }
@@ -1055,6 +1022,7 @@ function onDeviceOrientation(event) {
             bridgeAlertHistory = {};
             headingHistory = [];
             positionHistory = [];
+            lastHapticAlert = {};
             updateUI();
         }
 
@@ -1064,7 +1032,6 @@ function onDeviceOrientation(event) {
                 watchId = null;
             }
             
-            // Stop device orientation
             window.removeEventListener('deviceorientation', onDeviceOrientation);
             
             isMonitoring = false;
@@ -1078,6 +1045,7 @@ function onDeviceOrientation(event) {
             positionHistory = [];
             headingStableCount = 0;
             headingLocked = false;
+            lastHapticAlert = {};
             updateUI();
         }
 
@@ -1088,6 +1056,7 @@ function onDeviceOrientation(event) {
             bridgeAlertHistory = {};
             headingHistory = [];
             positionHistory = [];
+            lastHapticAlert = {};
             simulateLocation(testLocations[currentTestLocation]);
             updateUI();
         }
@@ -1098,6 +1067,7 @@ function onDeviceOrientation(event) {
             bridgeAlertHistory = {};
             headingHistory = [];
             positionHistory = [];
+            lastHapticAlert = {};
             simulateLocation(testLocations[currentTestLocation]);
         }
 
@@ -1130,6 +1100,37 @@ function onDeviceOrientation(event) {
             gpsInfo.classList.add('active');
 
             checkAlerts();
+        }
+
+        function onDeviceOrientation(event) {
+            let compassHeading = null;
+            
+            if (event.webkitCompassHeading !== undefined) {
+                compassHeading = event.webkitCompassHeading;
+            } else if (event.alpha !== null) {
+                compassHeading = 360 - event.alpha;
+                if (compassHeading >= 360) compassHeading -= 360;
+            }
+            
+            if (compassHeading !== null) {
+                deviceHeading = compassHeading;
+                updateCompassDisplay();
+            }
+        }
+
+        function updateCompassDisplay() {
+            const compassRoses = document.querySelectorAll('.compass-rose');
+            const headingArrows = document.querySelectorAll('.compass-heading-arrow');
+            
+            const displayHeading = deviceHeading !== null ? deviceHeading : (currentHeading || 0);
+            
+            compassRoses.forEach(rose => {
+                rose.style.transform = `rotate(${-displayHeading}deg)`;
+            });
+            
+            headingArrows.forEach(arrow => {
+                arrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
+            });
         }
 
         function onPositionUpdate(position) {
@@ -1191,12 +1192,10 @@ function onDeviceOrientation(event) {
                 }
             }
 
-            // When moving fast, use GPS heading for alerts (more accurate)
-            const speedMph = (currentPosition.speed || 0) * 2.23694;
             if (speedMph >= 5) {
-                useDeviceCompass = false; // Use GPS for alerts
+                useDeviceCompass = false;
             } else {
-                useDeviceCompass = true; // Use device compass for display
+                useDeviceCompass = true;
             }
 
             updateGPSDisplay();
@@ -1438,10 +1437,32 @@ function onDeviceOrientation(event) {
                         <div class="empty-subtitle">No bridge alerts ahead</div>
                     </div>
                 `;
+                lastHapticAlert = {};
                 return;
             }
 
             alerts.sort((a, b) => a.distance - b.distance);
+
+            if (navigator.vibrate && alerts.length > 0) {
+                const topAlert = alerts[0];
+                const alertKey = topAlert.bridge.id;
+                const lastLevel = lastHapticAlert[alertKey];
+                
+                if (!lastLevel || 
+                    (topAlert.level === 'critical' && lastLevel !== 'critical') ||
+                    (topAlert.level === 'warning' && lastLevel === 'caution')) {
+                    
+                    if (topAlert.level === 'critical') {
+                        navigator.vibrate([300, 100, 300, 100, 300]);
+                    } else if (topAlert.level === 'warning') {
+                        navigator.vibrate([200, 100, 200]);
+                    } else if (topAlert.level === 'caution') {
+                        navigator.vibrate([150]);
+                    }
+                    
+                    lastHapticAlert[alertKey] = topAlert.level;
+                }
+            }
 
             const html = alerts.map((alert, index) => {
                 const actionText = {
@@ -1450,10 +1471,8 @@ function onDeviceOrientation(event) {
                     caution: '⚠️ CAUTION - MONITOR ROUTE'
                 }[alert.level];
 
-                // Only show compass for the FIRST (nearest) alert
                 const showCompass = index === 0;
                 
-                // Calculate relative bearing (where bridge is relative to your heading)
                 let relativeBearing = alert.bearing;
                 if (currentHeading !== null) {
                     relativeBearing = alert.bearing - currentHeading;
@@ -1514,10 +1533,6 @@ function onDeviceOrientation(event) {
             }).join('');
 
             alertsSection.innerHTML = html;
-
-            if (alerts[0].level === 'critical' && navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
-            }
         }
 
         function updateUI() {
