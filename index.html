@@ -1,4 +1,46 @@
-<!DOCTYPE html>
+function isGettingCloser(bridgeLat, bridgeLon) {
+            // Need at least 3 positions to determine trend
+            if (positionHistory.length < 3) return true;
+            
+            // Calculate distances for last 3 positions
+            const distances = positionHistory.slice(-3).map(pos => 
+                calculateDistance(pos.lat, pos.lon, bridgeLat, bridgeLon)
+            );
+            
+            // Check if distance is decreasing (getting closer)
+            // Allow small increases due to GPS jitter (0.02 miles = ~100 feet)
+            const isDecreasing = distances[2] < distances[0] + 0.02;
+            
+            console.log(`  Distance trend: ${distances.map(d => d.toFixed(3)).join(' → ')}mi (closer: ${isDecreasing})`);
+            
+            return isDecreasing;
+        }
+
+        function doesTrajectoryIntersectBridge(bridgeLat, bridgeLon) {
+            // Need at least 2 positions to calculate trajectory
+            if (positionHistory.length < 2) return true;
+            
+            // Get last two positions to determine trajectory
+            const p1 = positionHistory[positionHistory.length - 2];
+            const p2 = positionHistory[positionHistory.length - 1];
+            
+            // Calculate bearing of our trajectory
+            const trajectoryBearing = calculateBearing(p1.lat, p1.lon, p2.lat, p2.lon);
+            
+            // Calculate bearing to bridge from current position
+            const bearingToBridge = calculateBearing(p2.lat, p2.lon, bridgeLat, bridgeLon);
+            
+            // Calculate angle difference
+            let angleDiff = Math.abs(trajectoryBearing - bearingToBridge);
+            if (angleDiff > 180) angleDiff = 360 - angleDiff;
+            
+            // Trajectory intersects if angle is small (within 30°)
+            const intersects = angleDiff <= 30;
+            
+            console.log(`  Trajectory: ${trajectoryBearing.toFixed(0)}°, To bridge: ${bearingToBridge.toFixed(0)}°, Diff: ${angleDiff.toFixed(0)}° (intersects: ${intersects})`);
+            
+            return intersects;
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -682,7 +724,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v2.6</div>
+            <div class="version">v2.7</div>
         </div>
 
         <div class="vehicle-card">
@@ -987,6 +1029,7 @@
             previousPosition = null;
             bridgeAlertHistory = {};
             headingHistory = [];
+            positionHistory = [];
             headingStableCount = 0;
             headingLocked = false;
             updateUI();
@@ -1037,8 +1080,21 @@
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy,
-                speed: position.coords.speed || 0
+                speed: position.coords.speed || 0,
+                timestamp: Date.now()
             };
+
+            // Add to position history for trajectory analysis
+            positionHistory.push({
+                lat: currentPosition.latitude,
+                lon: currentPosition.longitude,
+                timestamp: currentPosition.timestamp
+            });
+            
+            // Keep only last N positions
+            if (positionHistory.length > POSITION_HISTORY_SIZE) {
+                positionHistory.shift();
+            }
 
             let newHeading = null;
             const MINIMUM_SPEED_MPH = 5; // Only trust heading when moving at least 5 mph
@@ -1258,6 +1314,8 @@
             const { latitude, longitude } = currentPosition;
             const now = Date.now();
 
+            console.log('\n=== Alert Check ===');
+
             for (const bridge of bridges) {
                 // Skip bridges that are overpasses (below the freeway)
                 if (bridge.type === 'overpass') continue;
@@ -1272,19 +1330,37 @@
                     if (headingDiff > 180) headingDiff = 360 - headingDiff;
                 }
                 
-                const isHeadingTowardsBridge = isHeadingTowards(bearing, currentHeading);
-                
-                // Log decision for debugging
-                console.log(`Bridge: ${bridge.name}`);
+                console.log(`\nBridge: ${bridge.name}`);
                 console.log(`  Distance: ${distance.toFixed(2)}mi`);
                 console.log(`  Bearing to bridge: ${bearing.toFixed(0)}°`);
                 console.log(`  Your heading: ${currentHeading ? currentHeading.toFixed(0) + '°' : 'unknown'}`);
                 console.log(`  Heading difference: ${headingDiff ? headingDiff.toFixed(0) + '°' : 'N/A'}`);
-                console.log(`  Heading towards bridge: ${isHeadingTowardsBridge}`);
-                console.log(`  Too tall: ${vehicleHeight > bridge.clearance}`);
                 
-                // Only alert if vehicle is too tall AND heading towards bridge
-                if (vehicleHeight > bridge.clearance && isHeadingTowardsBridge) {
+                // STAGE 1: Basic checks
+                const isHeadingTowardsBridge = isHeadingTowards(bearing, currentHeading);
+                const isTooTall = vehicleHeight > bridge.clearance;
+                
+                console.log(`  Heading towards: ${isHeadingTowardsBridge}`);
+                console.log(`  Too tall: ${isTooTall}`);
+                
+                // STAGE 2: Advanced trajectory checks (only if basic checks pass)
+                let gettingCloser = false;
+                let trajectoryIntersects = false;
+                
+                if (isHeadingTowardsBridge && isTooTall) {
+                    gettingCloser = isGettingCloser(bridge.lat, bridge.lon);
+                    trajectoryIntersects = doesTrajectoryIntersectBridge(bridge.lat, bridge.lon);
+                }
+                
+                // Only alert if ALL checks pass
+                const shouldAlert = isTooTall && 
+                                   isHeadingTowardsBridge && 
+                                   gettingCloser && 
+                                   trajectoryIntersects;
+                
+                console.log(`  FINAL: Should alert = ${shouldAlert}`);
+                
+                if (shouldAlert) {
                     let level = null;
                     if (distance <= 0.5) level = 'critical';
                     else if (distance <= 1.0) level = 'warning';
