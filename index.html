@@ -1,46 +1,4 @@
-function isGettingCloser(bridgeLat, bridgeLon) {
-            // Need at least 3 positions to determine trend
-            if (positionHistory.length < 3) return true;
-            
-            // Calculate distances for last 3 positions
-            const distances = positionHistory.slice(-3).map(pos => 
-                calculateDistance(pos.lat, pos.lon, bridgeLat, bridgeLon)
-            );
-            
-            // Check if distance is decreasing (getting closer)
-            // Allow small increases due to GPS jitter (0.02 miles = ~100 feet)
-            const isDecreasing = distances[2] < distances[0] + 0.02;
-            
-            console.log(`  Distance trend: ${distances.map(d => d.toFixed(3)).join(' → ')}mi (closer: ${isDecreasing})`);
-            
-            return isDecreasing;
-        }
-
-        function doesTrajectoryIntersectBridge(bridgeLat, bridgeLon) {
-            // Need at least 2 positions to calculate trajectory
-            if (positionHistory.length < 2) return true;
-            
-            // Get last two positions to determine trajectory
-            const p1 = positionHistory[positionHistory.length - 2];
-            const p2 = positionHistory[positionHistory.length - 1];
-            
-            // Calculate bearing of our trajectory
-            const trajectoryBearing = calculateBearing(p1.lat, p1.lon, p2.lat, p2.lon);
-            
-            // Calculate bearing to bridge from current position
-            const bearingToBridge = calculateBearing(p2.lat, p2.lon, bridgeLat, bridgeLon);
-            
-            // Calculate angle difference
-            let angleDiff = Math.abs(trajectoryBearing - bearingToBridge);
-            if (angleDiff > 180) angleDiff = 360 - angleDiff;
-            
-            // Trajectory intersects if angle is small (within 30°)
-            const intersects = angleDiff <= 30;
-            
-            console.log(`  Trajectory: ${trajectoryBearing.toFixed(0)}°, To bridge: ${bearingToBridge.toFixed(0)}°, Diff: ${angleDiff.toFixed(0)}° (intersects: ${intersects})`);
-            
-            return intersects;
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -73,7 +31,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* Header */
         .header {
             padding: max(20px, env(safe-area-inset-top)) 20px 16px;
             background: linear-gradient(180deg, rgba(10, 14, 26, 0.95) 0%, rgba(10, 14, 26, 0) 100%);
@@ -146,7 +103,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             letter-spacing: 0.3px;
         }
 
-        /* Vehicle Settings Card */
         .vehicle-card {
             margin: 0 20px 12px;
             padding: 12px 16px;
@@ -189,7 +145,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             white-space: nowrap;
         }
 
-        /* Vehicle Settings Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -285,7 +240,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             color: #94a3b8;
         }
 
-        /* GPS Info */
         .gps-info {
             margin: 0 20px 16px;
             padding: 12px;
@@ -330,7 +284,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             font-weight: 600;
         }
 
-        /* Alerts Section */
         .alerts-section {
             flex: 1;
             overflow-y: auto;
@@ -344,7 +297,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             display: none;
         }
 
-        /* Empty State */
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -374,7 +326,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             color: #64748b;
         }
 
-        /* Alert Card */
         .alert {
             margin-bottom: 16px;
             border-radius: 24px;
@@ -521,7 +472,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             color: #fde047;
         }
 
-        /* Control Area */
         .control-area {
             position: fixed;
             bottom: 0;
@@ -596,7 +546,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             to { transform: rotate(360deg); }
         }
 
-        /* Test Mode Indicator */
         .test-mode-banner {
             padding: 8px;
             background: rgba(168, 85, 247, 0.9);
@@ -612,7 +561,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             display: block;
         }
 
-        /* Map View */
         .map-view {
             position: fixed;
             top: 0;
@@ -770,7 +718,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         </div>
     </div>
 
-    <!-- Vehicle Settings Modal -->
     <div class="modal-overlay" id="vehicleModal">
         <div class="modal">
             <div class="modal-header">Vehicle Settings</div>
@@ -785,7 +732,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         </div>
     </div>
 
-    <!-- Map View -->
     <div class="map-view" id="mapView">
         <div class="map-header">
             <div class="map-title">Bridge Map</div>
@@ -826,9 +772,14 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 15; // Increased from 5 to 15 for more smoothing
-        const HEADING_CHANGE_THRESHOLD = 3; // Reduced from 5 to 3 - more filtering
+        const HEADING_HISTORY_SIZE = 15;
+        const HEADING_CHANGE_THRESHOLD = 3;
         let headingWatchId = null;
+        let headingStableCount = 0;
+        const HEADING_STABLE_THRESHOLD = 5;
+        let headingLocked = false;
+        let positionHistory = [];
+        const POSITION_HISTORY_SIZE = 5;
 
         const testLocations = [
             { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
@@ -841,20 +792,14 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         let currentTestLocation = 0;
 
         const bridges = [
-            // LA AREA BRIDGES - Set to 13ft for testing alerts
-            // type: 'underpass' = you drive under it (clearance matters)
-            // type: 'overpass' = bridge goes over freeway below you (ignore)
             { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
             { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass' },
             { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA', type: 'overpass' },
             { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass' },
             { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
-            
-            // DALLAS AREA BRIDGES
             { id: 'DAL-BRIDGE-001', name: 'Dallas Bridge', lat: 32.999500454468176, lon: -96.76771981164418, clearance: 16.75, location: 'Dallas, TX', type: 'underpass' }
         ];
 
-        // DOM Elements
         const controlBtn = document.getElementById('controlBtn');
         const testBtn = document.getElementById('testBtn');
         const statusDot = document.getElementById('statusDot');
@@ -881,7 +826,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         const ctx = mapCanvas.getContext('2d');
         let mapScale = 1.0;
 
-        // Vehicle Settings
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
             vehicleModal.classList.add('active');
@@ -893,55 +837,35 @@ function isGettingCloser(bridgeLat, bridgeLon) {
 
         saveBtn.addEventListener('click', () => {
             const newHeight = parseFloat(heightInput.value);
-            console.log('Save clicked, new height:', newHeight);
             if (!isNaN(newHeight) && newHeight > 0) {
                 vehicleHeight = newHeight;
-                console.log('Vehicle height updated to:', vehicleHeight);
                 updateVehicleDisplay();
                 vehicleModal.classList.remove('active');
-                if (isMonitoring) {
-                    console.log('Rechecking alerts...');
-                    checkAlerts();
-                }
+                if (isMonitoring) checkAlerts();
             } else {
                 alert('Please enter a valid height in feet');
             }
         });
 
-        // Allow closing modal by clicking outside
         vehicleModal.addEventListener('click', (e) => {
             if (e.target === vehicleModal) {
                 vehicleModal.classList.remove('active');
             }
         });
 
-        // Map Controls
         mapToggle.addEventListener('click', () => {
-            console.log('Map toggle clicked');
-            console.log('Current position:', currentPosition);
-            console.log('Is monitoring:', isMonitoring);
-            
             if (!currentPosition) {
                 alert('Start monitoring first to view map');
                 return;
             }
-            
-            console.log('Opening map view...');
             mapView.classList.add('active');
-            console.log('Map view classes:', mapView.classList);
-            console.log('Map view display:', window.getComputedStyle(mapView).display);
-            
-            setTimeout(() => {
-                console.log('Drawing map after timeout...');
-                drawMap();
-            }, 100);
+            setTimeout(() => drawMap(), 100);
         });
 
         mapClose.addEventListener('click', () => {
             mapView.classList.remove('active');
         });
 
-        // Map zoom with pinch/scroll
         let touchDistance = 0;
         mapCanvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
@@ -976,7 +900,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             vehicleSpec.textContent = `Height: ${vehicleHeight} feet`;
         }
 
-        // Control Buttons
         controlBtn.addEventListener('click', () => {
             isMonitoring ? stopMonitoring() : startMonitoring();
         });
@@ -995,24 +918,17 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 return;
             }
 
-            // Watch position for location updates - high accuracy mode
             watchId = navigator.geolocation.watchPosition(
                 onPositionUpdate,
                 onPositionError,
-                { 
-                    enableHighAccuracy: true, 
-                    maximumAge: 0, 
-                    timeout: 10000
-                }
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
-
-            // Don't use device orientation - too unreliable in vehicles
-            // Only rely on GPS heading when moving
 
             isMonitoring = true;
             isTestMode = false;
             bridgeAlertHistory = {};
             headingHistory = [];
+            positionHistory = [];
             updateUI();
         }
 
@@ -1041,6 +957,7 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             currentTestLocation = 0;
             bridgeAlertHistory = {};
             headingHistory = [];
+            positionHistory = [];
             simulateLocation(testLocations[currentTestLocation]);
             updateUI();
         }
@@ -1050,6 +967,7 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             currentTestLocation = (currentTestLocation + 1) % testLocations.length;
             bridgeAlertHistory = {};
             headingHistory = [];
+            positionHistory = [];
             simulateLocation(testLocations[currentTestLocation]);
         }
 
@@ -1059,8 +977,19 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             currentPosition = {
                 latitude: location.lat,
                 longitude: location.lon,
-                accuracy: 10
+                accuracy: 10,
+                timestamp: Date.now()
             };
+
+            positionHistory.push({
+                lat: currentPosition.latitude,
+                lon: currentPosition.longitude,
+                timestamp: currentPosition.timestamp
+            });
+            
+            if (positionHistory.length > POSITION_HISTORY_SIZE) {
+                positionHistory.shift();
+            }
 
             currentHeading = location.heading;
             addHeadingToHistory(currentHeading);
@@ -1084,30 +1013,26 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 timestamp: Date.now()
             };
 
-            // Add to position history for trajectory analysis
             positionHistory.push({
                 lat: currentPosition.latitude,
                 lon: currentPosition.longitude,
                 timestamp: currentPosition.timestamp
             });
             
-            // Keep only last N positions
             if (positionHistory.length > POSITION_HISTORY_SIZE) {
                 positionHistory.shift();
             }
 
             let newHeading = null;
-            const MINIMUM_SPEED_MPH = 5; // Only trust heading when moving at least 5 mph
-            const speedMph = (position.coords.speed || 0) * 2.23694; // m/s to mph
+            const MINIMUM_SPEED_MPH = 5;
+            const speedMph = (position.coords.speed || 0) * 2.23694;
             
-            // Priority 1: GPS heading when moving fast enough (most accurate)
             if (position.coords.heading !== null && 
                 position.coords.heading !== undefined && 
                 speedMph >= MINIMUM_SPEED_MPH) {
                 newHeading = position.coords.heading;
-                headingLocked = false; // Unlock when we have good GPS heading
+                headingLocked = false;
             }
-            // Priority 2: Calculate from position changes when moving
             else if (previousPosition && speedMph >= MINIMUM_SPEED_MPH) {
                 newHeading = calculateBearing(
                     previousPosition.latitude,
@@ -1117,26 +1042,20 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 );
                 headingLocked = false;
             }
-            // Priority 3: When stopped or moving slowly, maintain last known heading
             else if (currentHeading !== null) {
-                // Keep the last known heading - don't update
                 headingLocked = true;
             }
 
-            // Only update heading if we have new data and not locked
             if (newHeading !== null && !headingLocked) {
-                // Check if this is a significant change
                 if (currentHeading !== null) {
                     let diff = Math.abs(newHeading - currentHeading);
                     if (diff > 180) diff = 360 - diff;
                     
-                    // Only add if significant change OR still building history
                     if (diff >= HEADING_CHANGE_THRESHOLD || headingHistory.length < 3) {
                         addHeadingToHistory(newHeading);
                         currentHeading = getSmoothedHeading();
                     }
                 } else {
-                    // First reading
                     addHeadingToHistory(newHeading);
                     currentHeading = getSmoothedHeading();
                 }
@@ -1151,56 +1070,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             }
         }
 
-        function onDeviceOrientation(event) {
-            if (isTestMode || !currentPosition) return;
-            
-            // Throttle compass updates to reduce jitter
-            const now = Date.now();
-            if (now - (window.lastCompassUpdate || 0) < 100) return; // Max 10 updates/sec
-            window.lastCompassUpdate = now;
-            
-            let compassHeading = null;
-            
-            if (event.webkitCompassHeading !== undefined) {
-                // iOS
-                compassHeading = event.webkitCompassHeading;
-            } else if (event.alpha !== null) {
-                // Android
-                compassHeading = 360 - event.alpha;
-                if (compassHeading >= 360) compassHeading -= 360;
-            }
-            
-            if (compassHeading !== null) {
-                // Check if heading has stabilized
-                if (currentHeading !== null) {
-                    let diff = Math.abs(compassHeading - currentHeading);
-                    if (diff > 180) diff = 360 - diff;
-                    
-                    if (diff < 2) {
-                        // Heading is stable (less than 2 degrees change)
-                        headingStableCount++;
-                        
-                        if (headingStableCount >= HEADING_STABLE_THRESHOLD) {
-                            // Lock the heading - stop updating
-                            headingLocked = true;
-                            return;
-                        }
-                    } else if (diff > 10) {
-                        // Significant change detected - unlock and reset
-                        headingLocked = false;
-                        headingStableCount = 0;
-                    }
-                }
-                
-                // Only update if not locked
-                if (!headingLocked) {
-                    addHeadingToHistory(compassHeading);
-                    currentHeading = getSmoothedHeading();
-                    updateGPSDisplay();
-                }
-            }
-        }
-
         function updateGPSDisplay() {
             if (!currentPosition) return;
             
@@ -1212,10 +1081,10 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 const headingText = `Heading: ${Math.round(currentHeading)}° ${getCardinalDirection(currentHeading)}`;
                 if (speedMph < 5) {
                     gpsHeading.textContent = `${headingText} (Stopped)`;
-                    gpsHeading.style.color = '#94a3b8'; // Dimmed when stopped
+                    gpsHeading.style.color = '#94a3b8';
                 } else {
                     gpsHeading.textContent = headingText;
-                    gpsHeading.style.color = '#60a5fa'; // Bright when moving
+                    gpsHeading.style.color = '#60a5fa';
                 }
             } else {
                 gpsHeading.textContent = `Heading: Start driving...`;
@@ -1224,15 +1093,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             
             gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
             gpsInfo.classList.add('active');
-        }
-
-        function isSignificantHeadingChange(newHeading, oldHeading) {
-            if (oldHeading === null) return true;
-            
-            let diff = Math.abs(newHeading - oldHeading);
-            if (diff > 180) diff = 360 - diff;
-            
-            return diff >= HEADING_CHANGE_THRESHOLD;
         }
 
         function onPositionError(error) {
@@ -1273,12 +1133,10 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         function getSmoothedHeading() {
             if (headingHistory.length === 0) return null;
             
-            // Use exponential weighted average - much more weight to recent readings
             let sumX = 0, sumY = 0, totalWeight = 0;
             
             for (let i = 0; i < headingHistory.length; i++) {
                 const heading = headingHistory[i];
-                // Exponential weight: recent readings get MUCH more weight
                 const weight = Math.pow(2, i);
                 const rad = toRadians(heading);
                 sumX += Math.cos(rad) * weight;
@@ -1291,13 +1149,7 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         }
 
         function isHeadingTowards(bearing, heading, tolerance = 20) {
-            // Strict 20° tolerance - bridge must be almost directly ahead
-            // Only filter by heading if we have accurate heading data (moving >= 5 mph)
             if (heading === null || headingHistory.length < 3 || headingLocked) {
-                // Show all alerts if:
-                // - No heading data yet
-                // - Not enough history
-                // - Stopped/slow (heading locked)
                 return true;
             }
             
@@ -1305,6 +1157,39 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             if (diff > 180) diff = 360 - diff;
             
             return diff <= tolerance;
+        }
+
+        function isGettingCloser(bridgeLat, bridgeLon) {
+            if (positionHistory.length < 3) return true;
+            
+            const distances = positionHistory.slice(-3).map(pos => 
+                calculateDistance(pos.lat, pos.lon, bridgeLat, bridgeLon)
+            );
+            
+            const isDecreasing = distances[2] < distances[0] + 0.02;
+            
+            console.log(`  Distance trend: ${distances.map(d => d.toFixed(3)).join(' → ')}mi (closer: ${isDecreasing})`);
+            
+            return isDecreasing;
+        }
+
+        function doesTrajectoryIntersectBridge(bridgeLat, bridgeLon) {
+            if (positionHistory.length < 2) return true;
+            
+            const p1 = positionHistory[positionHistory.length - 2];
+            const p2 = positionHistory[positionHistory.length - 1];
+            
+            const trajectoryBearing = calculateBearing(p1.lat, p1.lon, p2.lat, p2.lon);
+            const bearingToBridge = calculateBearing(p2.lat, p2.lon, bridgeLat, bridgeLon);
+            
+            let angleDiff = Math.abs(trajectoryBearing - bearingToBridge);
+            if (angleDiff > 180) angleDiff = 360 - angleDiff;
+            
+            const intersects = angleDiff <= 30;
+            
+            console.log(`  Trajectory: ${trajectoryBearing.toFixed(0)}°, To bridge: ${bearingToBridge.toFixed(0)}°, Diff: ${angleDiff.toFixed(0)}° (intersects: ${intersects})`);
+            
+            return intersects;
         }
 
         function checkAlerts() {
@@ -1317,13 +1202,11 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             console.log('\n=== Alert Check ===');
 
             for (const bridge of bridges) {
-                // Skip bridges that are overpasses (below the freeway)
                 if (bridge.type === 'overpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
                 const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
-                // Calculate heading difference for debugging
                 let headingDiff = null;
                 if (currentHeading !== null) {
                     headingDiff = Math.abs(bearing - currentHeading);
@@ -1336,14 +1219,12 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 console.log(`  Your heading: ${currentHeading ? currentHeading.toFixed(0) + '°' : 'unknown'}`);
                 console.log(`  Heading difference: ${headingDiff ? headingDiff.toFixed(0) + '°' : 'N/A'}`);
                 
-                // STAGE 1: Basic checks
                 const isHeadingTowardsBridge = isHeadingTowards(bearing, currentHeading);
                 const isTooTall = vehicleHeight > bridge.clearance;
                 
                 console.log(`  Heading towards: ${isHeadingTowardsBridge}`);
                 console.log(`  Too tall: ${isTooTall}`);
                 
-                // STAGE 2: Advanced trajectory checks (only if basic checks pass)
                 let gettingCloser = false;
                 let trajectoryIntersects = false;
                 
@@ -1352,7 +1233,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                     trajectoryIntersects = doesTrajectoryIntersectBridge(bridge.lat, bridge.lon);
                 }
                 
-                // Only alert if ALL checks pass
                 const shouldAlert = isTooTall && 
                                    isHeadingTowardsBridge && 
                                    gettingCloser && 
@@ -1370,7 +1250,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                         const lastAlert = bridgeAlertHistory[bridge.id];
                         const lastDistance = lastAlert?.distance || Infinity;
                         
-                        // Only add alert if distance is decreasing (getting closer)
                         if (!lastAlert || distance < lastDistance) {
                             console.log(`  ✅ ALERT TRIGGERED: ${level}`);
                             alerts.push({
@@ -1392,7 +1271,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 }
             }
 
-            // Clean up old history entries (older than 5 minutes)
             for (const id in bridgeAlertHistory) {
                 if (now - bridgeAlertHistory[id].timestamp > 300000) {
                     delete bridgeAlertHistory[id];
@@ -1513,19 +1391,12 @@ function isGettingCloser(bridgeLat, bridgeLon) {
         }
 
         function drawMap() {
-            if (!currentPosition) {
-                console.log('No position available for map');
-                return;
-            }
-
-            console.log('Drawing map for position:', currentPosition.latitude, currentPosition.longitude);
+            if (!currentPosition) return;
 
             const rect = mapCanvas.getBoundingClientRect();
             const displayWidth = rect.width;
             const displayHeight = rect.height;
             const dpr = window.devicePixelRatio || 1;
-            
-            console.log('Canvas dimensions:', displayWidth, 'x', displayHeight, 'DPR:', dpr);
             
             mapCanvas.width = displayWidth * dpr;
             mapCanvas.height = displayHeight * dpr;
@@ -1542,9 +1413,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             
             const centerX = displayWidth / 2;
             const centerY = displayHeight / 2;
-
-            console.log('Map center:', centerX, centerY, 'Range:', range, 'miles');
-            console.log('Miles per degree: lat=', milesPerDegreeLat, 'lon=', milesPerDegreeLon);
 
             function toScreen(lat, lon) {
                 const latDiff = lat - currentPosition.latitude;
@@ -1603,9 +1471,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
             ctx.textAlign = 'right';
             ctx.fillText('W', 25, centerY + 5);
 
-            let bridgesDrawn = 0;
-            let bridgesInRange = [];
-            
             for (const bridge of bridges) {
                 const distance = calculateDistance(
                     currentPosition.latitude,
@@ -1614,18 +1479,10 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                     bridge.lon
                 );
 
-                if (distance <= range) {
-                    bridgesInRange.push({ bridge, distance });
-                }
-            }
-            
-            console.log('Bridges in range:', bridgesInRange.length, 'of', bridges.length);
-            
-            for (const { bridge, distance } of bridgesInRange) {
+                if (distance > range) continue;
+
                 const pos = toScreen(bridge.lat, bridge.lon);
                 const isTooLow = vehicleHeight > bridge.clearance;
-                
-                console.log(`Bridge ${bridge.name}: distance=${distance.toFixed(2)}mi, pos=(${pos.x.toFixed(0)}, ${pos.y.toFixed(0)}), onScreen=${pos.x >= 0 && pos.x <= displayWidth && pos.y >= 0 && pos.y <= displayHeight}`);
                 
                 ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)';
                 ctx.lineWidth = 2;
@@ -1668,11 +1525,7 @@ function isGettingCloser(bridgeLat, bridgeLon) {
                 ctx.fillStyle = '#94a3b8';
                 ctx.font = '10px system-ui';
                 ctx.fillText(`${distance.toFixed(1)} mi • ${bridge.clearance}' clearance`, pos.x, pos.y + 35);
-                
-                bridgesDrawn++;
             }
-
-            console.log('Drew', bridgesDrawn, 'bridges on canvas');
 
             if (currentHeading !== null) {
                 ctx.save();
@@ -1709,8 +1562,6 @@ function isGettingCloser(bridgeLat, bridgeLon) {
 
             mapZoom.textContent = mapScale.toFixed(1);
             mapRange.textContent = range.toFixed(1);
-            
-            console.log('Map drawing complete');
         }
 
         window.addEventListener('resize', () => {
