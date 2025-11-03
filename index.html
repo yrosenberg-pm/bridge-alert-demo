@@ -475,7 +475,6 @@
             color: #fde047;
         }
 
-        /* Compass Widget */
         .compass-widget {
             margin-top: 20px;
             padding: 24px;
@@ -691,27 +690,8 @@
             color: white;
         }
 
-        .control-btn.map {
-            background: #22c55e;
-            color: white;
-            display: none;
-        }
-
         .control-btn:active {
             transform: scale(0.98);
-        }
-
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
 
         .test-mode-banner {
@@ -727,103 +707,6 @@
 
         .test-mode-banner.active {
             display: block;
-        }
-
-        .map-view {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #0a0e1a;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-        }
-
-        .map-view.active {
-            display: flex;
-        }
-
-        .map-header {
-            padding: max(20px, env(safe-area-inset-top)) 20px 16px;
-            background: rgba(10, 14, 26, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
-            flex-shrink: 0;
-            z-index: 1001;
-        }
-
-        .map-title {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .map-close {
-            padding: 8px 16px;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            color: #ef4444;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .map-container {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            background: #1e293b;
-        }
-
-        .map-canvas {
-            width: 100%;
-            height: 100%;
-            background: #0f172a;
-            touch-action: none;
-        }
-
-        .map-legend {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(30, 41, 59, 0.95);
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            font-size: 11px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-
-        .legend-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-        .map-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(30, 41, 59, 0.95);
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            font-size: 11px;
-            text-align: right;
         }
     </style>
 </head>
@@ -1482,13 +1365,13 @@
                 const compassHTML = showCompass ? `
                     <div class="compass-widget">
                         <div class="compass-container">
-                            <div class="compass-rose" style="transform: rotate(${currentHeading || 0}deg);">
+                            <div class="compass-rose" style="transform: rotate(${-(currentHeading || 0)}deg);">
                                 <div class="compass-cardinal n">N</div>
                                 <div class="compass-cardinal e">E</div>
                                 <div class="compass-cardinal s">S</div>
                                 <div class="compass-cardinal w">W</div>
                             </div>
-                            <div class="compass-heading-arrow" style="transform: translate(-50%, -100%) rotate(${currentHeading || 0}deg);"></div>
+                            <div class="compass-heading-arrow"></div>
                             <div class="compass-bridge-arrow ${alert.level}" style="transform: translate(-50%, -100%) rotate(${alert.bearing}deg);"></div>
                             <div class="compass-center"></div>
                         </div>
