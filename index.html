@@ -1,4 +1,40 @@
-<!DOCTYPE html>
+function onDeviceOrientation(event) {
+            // Get compass heading from device for real-time compass display
+            let compassHeading = null;
+            
+            if (event.webkitCompassHeading !== undefined) {
+                // iOS - provides true heading
+                compassHeading = event.webkitCompassHeading;
+            } else if (event.alpha !== null) {
+                // Android - calculate from alpha
+                compassHeading = 360 - event.alpha;
+                if (compassHeading >= 360) compassHeading -= 360;
+            }
+            
+            if (compassHeading !== null) {
+                deviceHeading = compassHeading;
+                
+                // Update compass display in real-time
+                updateCompassDisplay();
+            }
+        }
+
+        function updateCompassDisplay() {
+            // Update all compass widgets on screen
+            const compassRoses = document.querySelectorAll('.compass-rose');
+            const headingArrows = document.querySelectorAll('.compass-heading-arrow');
+            
+            // Use device compass if available, otherwise use GPS heading
+            const displayHeading = deviceHeading !== null ? deviceHeading : (currentHeading || 0);
+            
+            compassRoses.forEach(rose => {
+                rose.style.transform = `rotate(${-displayHeading}deg)`;
+            });
+            
+            headingArrows.forEach(arrow => {
+                arrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
+            });
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -837,7 +873,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v2.7</div>
+            <div class="version">v2.9</div>
         </div>
 
         <div class="vehicle-card">
@@ -876,9 +912,6 @@
                 <button class="control-btn test" id="testBtn">
                     <span>Test</span>
                 </button>
-                <button class="control-btn map" id="mapToggle">
-                    <span>Map</span>
-                </button>
             </div>
         </div>
     </div>
@@ -893,34 +926,6 @@
             <div class="modal-buttons">
                 <button class="modal-btn secondary" id="cancelBtn">Cancel</button>
                 <button class="modal-btn primary" id="saveBtn">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="map-view" id="mapView">
-        <div class="map-header">
-            <div class="map-title">Bridge Map</div>
-            <button class="map-close" id="mapClose">Close</button>
-        </div>
-        <div class="map-container">
-            <canvas class="map-canvas" id="mapCanvas"></canvas>
-            <div class="map-legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #60a5fa;"></div>
-                    <span>Your Location</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #ef4444;"></div>
-                    <span>Too Low (Alert)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #22c55e;"></div>
-                    <span>Safe Clearance</span>
-                </div>
-            </div>
-            <div class="map-info" id="mapInfo">
-                <div>Zoom: <span id="mapZoom">1.0</span>x</div>
-                <div>Range: <span id="mapRange">5</span> mi</div>
             </div>
         </div>
     </div>
@@ -945,6 +950,8 @@
         let headingLocked = false;
         let positionHistory = [];
         const POSITION_HISTORY_SIZE = 5;
+        let deviceHeading = null; // Real-time compass heading from device
+        let useDeviceCompass = true; // Use device compass for display
 
         const testLocations = [
             { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
@@ -982,14 +989,6 @@
         const heightInput = document.getElementById('heightInput');
         const cancelBtn = document.getElementById('cancelBtn');
         const saveBtn = document.getElementById('saveBtn');
-        const mapToggle = document.getElementById('mapToggle');
-        const mapView = document.getElementById('mapView');
-        const mapClose = document.getElementById('mapClose');
-        const mapCanvas = document.getElementById('mapCanvas');
-        const mapZoom = document.getElementById('mapZoom');
-        const mapRange = document.getElementById('mapRange');
-        const ctx = mapCanvas.getContext('2d');
-        let mapScale = 1.0;
 
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -1016,49 +1015,6 @@
             if (e.target === vehicleModal) {
                 vehicleModal.classList.remove('active');
             }
-        });
-
-        mapToggle.addEventListener('click', () => {
-            if (!currentPosition) {
-                alert('Start monitoring first to view map');
-                return;
-            }
-            mapView.classList.add('active');
-            setTimeout(() => drawMap(), 100);
-        });
-
-        mapClose.addEventListener('click', () => {
-            mapView.classList.remove('active');
-        });
-
-        let touchDistance = 0;
-        mapCanvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                touchDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-            }
-        });
-
-        mapCanvas.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
-                e.preventDefault();
-                const newDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                const delta = newDistance - touchDistance;
-                mapScale = Math.max(0.5, Math.min(5, mapScale + delta * 0.01));
-                touchDistance = newDistance;
-                requestAnimationFrame(drawMap);
-            }
-        });
-
-        mapCanvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            mapScale = Math.max(0.5, Math.min(5, mapScale - e.deltaY * 0.001));
-            requestAnimationFrame(drawMap);
         });
 
         function updateVehicleDisplay() {
@@ -1089,6 +1045,11 @@
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
 
+            // Start device orientation for compass display
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', onDeviceOrientation);
+            }
+
             isMonitoring = true;
             isTestMode = false;
             bridgeAlertHistory = {};
@@ -1103,10 +1064,14 @@
                 watchId = null;
             }
             
+            // Stop device orientation
+            window.removeEventListener('deviceorientation', onDeviceOrientation);
+            
             isMonitoring = false;
             isTestMode = false;
             currentPosition = null;
             currentHeading = null;
+            deviceHeading = null;
             previousPosition = null;
             bridgeAlertHistory = {};
             headingHistory = [];
@@ -1224,6 +1189,14 @@
                     addHeadingToHistory(newHeading);
                     currentHeading = getSmoothedHeading();
                 }
+            }
+
+            // When moving fast, use GPS heading for alerts (more accurate)
+            const speedMph = (currentPosition.speed || 0) * 2.23694;
+            if (speedMph >= 5) {
+                useDeviceCompass = false; // Use GPS for alerts
+            } else {
+                useDeviceCompass = true; // Use device compass for display
             }
 
             updateGPSDisplay();
@@ -1587,186 +1560,6 @@
                 `;
             }
         }
-
-        function drawMap() {
-            if (!currentPosition) return;
-
-            const rect = mapCanvas.getBoundingClientRect();
-            const displayWidth = rect.width;
-            const displayHeight = rect.height;
-            const dpr = window.devicePixelRatio || 1;
-            
-            mapCanvas.width = displayWidth * dpr;
-            mapCanvas.height = displayHeight * dpr;
-            
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.scale(dpr, dpr);
-
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, displayWidth, displayHeight);
-
-            const range = 5 / mapScale;
-            const milesPerDegreeLat = 69.0;
-            const milesPerDegreeLon = 69.0 * Math.cos(toRadians(currentPosition.latitude));
-            
-            const centerX = displayWidth / 2;
-            const centerY = displayHeight / 2;
-
-            function toScreen(lat, lon) {
-                const latDiff = lat - currentPosition.latitude;
-                const lonDiff = lon - currentPosition.longitude;
-                
-                const latMiles = latDiff * milesPerDegreeLat;
-                const lonMiles = lonDiff * milesPerDegreeLon;
-                
-                const scale = Math.min(displayWidth, displayHeight) / (range * 2);
-                
-                return {
-                    x: centerX + (lonMiles * scale),
-                    y: centerY - (latMiles * scale)
-                };
-            }
-
-            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
-            ctx.lineWidth = 2;
-            const scale = Math.min(displayWidth, displayHeight) / (range * 2);
-            
-            for (let r = 1; r <= 5; r++) {
-                const radius = r * scale;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
-                ctx.font = '11px system-ui';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${r}mi`, centerX, centerY - radius + 15);
-            }
-
-            ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, 0);
-            ctx.lineTo(centerX, displayHeight);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(0, centerY);
-            ctx.lineTo(displayWidth, centerY);
-            ctx.stroke();
-            
-            ctx.setLineDash([]);
-
-            ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
-            ctx.font = 'bold 14px system-ui';
-            ctx.textAlign = 'center';
-            ctx.fillText('N', centerX, 25);
-            ctx.fillText('S', centerX, displayHeight - 10);
-            ctx.textAlign = 'left';
-            ctx.fillText('E', displayWidth - 25, centerY + 5);
-            ctx.textAlign = 'right';
-            ctx.fillText('W', 25, centerY + 5);
-
-            for (const bridge of bridges) {
-                const distance = calculateDistance(
-                    currentPosition.latitude,
-                    currentPosition.longitude,
-                    bridge.lat,
-                    bridge.lon
-                );
-
-                if (distance > range) continue;
-
-                const pos = toScreen(bridge.lat, bridge.lon);
-                const isTooLow = vehicleHeight > bridge.clearance;
-                
-                ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                ctx.fillStyle = isTooLow ? '#ef4444' : '#22c55e';
-                ctx.strokeStyle = isTooLow ? '#fca5a5' : '#86efac';
-                ctx.lineWidth = 3;
-                
-                ctx.beginPath();
-                ctx.rect(pos.x - 15, pos.y - 6, 30, 12);
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.fillStyle = isTooLow ? '#dc2626' : '#16a34a';
-                ctx.fillRect(pos.x - 12, pos.y - 6, 4, 12);
-                ctx.fillRect(pos.x + 8, pos.y - 6, 4, 12);
-
-                const bridgeName = bridge.name.split(' over ')[0];
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-                const labelWidth = Math.max(80, ctx.measureText(bridgeName).width + 20);
-                const labelHeight = 40;
-                ctx.fillRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
-                
-                ctx.strokeStyle = isTooLow ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(pos.x - labelWidth/2, pos.y + 15, labelWidth, labelHeight);
-                
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 11px system-ui';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(bridgeName, pos.x, pos.y + 20);
-                
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '10px system-ui';
-                ctx.fillText(`${distance.toFixed(1)} mi • ${bridge.clearance}' clearance`, pos.x, pos.y + 35);
-            }
-
-            if (currentHeading !== null) {
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(toRadians(currentHeading));
-                
-                ctx.beginPath();
-                ctx.moveTo(0, -40);
-                ctx.lineTo(-14, -14);
-                ctx.lineTo(0, -20);
-                ctx.lineTo(14, -14);
-                ctx.closePath();
-                ctx.fillStyle = '#60a5fa';
-                ctx.fill();
-                ctx.strokeStyle = '#93c5fd';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                ctx.restore();
-            }
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = '#3b82f6';
-            ctx.fill();
-            ctx.strokeStyle = '#93c5fd';
-            ctx.lineWidth = 4;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-
-            mapZoom.textContent = mapScale.toFixed(1);
-            mapRange.textContent = range.toFixed(1);
-        }
-
-        window.addEventListener('resize', () => {
-            if (mapView.classList.contains('active')) {
-                requestAnimationFrame(drawMap);
-            }
-        });
     </script>
 </body>
 </html>
