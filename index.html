@@ -612,9 +612,10 @@
             padding-bottom: max(12px, env(safe-area-inset-bottom));
             background: transparent;
             flex-shrink: 0;
-            z-index: 9999;
+            z-index: 1;
             display: flex;
             justify-content: flex-end;
+            pointer-events: none;
         }
 
         .control-btn.test {
@@ -628,6 +629,7 @@
             cursor: pointer;
             transition: all 0.2s;
             backdrop-filter: blur(10px);
+            pointer-events: auto;
         }
 
         .control-btn.test:active {
