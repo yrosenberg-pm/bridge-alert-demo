@@ -240,47 +240,7 @@
         }
 
         .gps-info {
-            margin: 0 20px 16px;
-            padding: 12px;
-            background: rgba(30, 41, 59, 0.4);
-            border-radius: 16px;
             display: none;
-            flex-direction: column;
-            gap: 8px;
-            border: 1px solid rgba(71, 85, 105, 0.3);
-            flex-shrink: 0;
-        }
-
-        .gps-info.active {
-            display: flex;
-        }
-
-        .gps-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .gps-coords {
-            font-size: 12px;
-            font-weight: 600;
-            color: #94a3b8;
-            font-family: 'Courier New', monospace;
-        }
-
-        .gps-heading {
-            font-size: 11px;
-            font-weight: 600;
-            color: #60a5fa;
-        }
-
-        .gps-accuracy {
-            font-size: 11px;
-            padding: 4px 8px;
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            border-radius: 8px;
-            font-weight: 600;
         }
 
         .alerts-section {
@@ -965,7 +925,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v2.9</div>
+            <div class="version">v3.0</div>
         </div>
 
         <div class="vehicle-card">
@@ -976,16 +936,6 @@
                 </div>
             </div>
             <button class="edit-btn" id="editVehicleBtn">Edit</button>
-        </div>
-
-        <div class="gps-info" id="gpsInfo">
-            <div class="gps-row">
-                <div class="gps-coords" id="gpsCoords">---.------, ---.------</div>
-                <div class="gps-accuracy" id="gpsAccuracy">GPS</div>
-            </div>
-            <div class="gps-row">
-                <div class="gps-heading" id="gpsHeading">Heading: ---°</div>
-            </div>
         </div>
 
         <div class="persistent-compass" id="persistentCompass">
@@ -1111,10 +1061,6 @@
 
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
-        const gpsInfo = document.getElementById('gpsInfo');
-        const gpsCoords = document.getElementById('gpsCoords');
-        const gpsHeading = document.getElementById('gpsHeading');
-        const gpsAccuracy = document.getElementById('gpsAccuracy');
         const alertsSection = document.getElementById('alertsSection');
         const vehicleSpec = document.getElementById('vehicleSpec');
         const editVehicleBtn = document.getElementById('editVehicleBtn');
@@ -1133,6 +1079,10 @@
         const statusPulse = document.getElementById('statusPulse');
         const bridgeAlertBanner = document.getElementById('bridgeAlertBanner');
         const bridgeAlertSubtitle = document.getElementById('bridgeAlertSubtitle');
+        const headingDisplay = document.getElementById('headingDisplay');
+        const directionDisplay = document.getElementById('directionDisplay');
+        const latDisplay = document.getElementById('latDisplay');
+        const lonDisplay = document.getElementById('lonDisplay');
 
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -1241,6 +1191,18 @@
             
             persistentCompassRose.style.transform = `rotate(${-displayHeading}deg)`;
             persistentHeadingArrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
+            
+            // Update heading and direction display
+            if (currentHeading !== null) {
+                headingDisplay.textContent = `${Math.round(currentHeading)}°`;
+                directionDisplay.textContent = getCardinalDirection(currentHeading);
+            }
+            
+            // Update lat/lon display
+            if (currentPosition) {
+                latDisplay.textContent = currentPosition.latitude.toFixed(6);
+                lonDisplay.textContent = currentPosition.longitude.toFixed(6);
+            }
             
             if (nearestBridge) {
                 persistentBridgeArrow.style.display = 'block';
@@ -1366,28 +1328,7 @@
         }
 
         function updateGPSDisplay() {
-            if (!currentPosition) return;
-            
-            gpsCoords.textContent = `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
-            
-            const speedMph = (currentPosition.speed || 0) * 2.23694;
-            
-            if (currentHeading !== null) {
-                const headingText = `Heading: ${Math.round(currentHeading)}° ${getCardinalDirection(currentHeading)}`;
-                if (speedMph < 5) {
-                    gpsHeading.textContent = `${headingText} (Stopped)`;
-                    gpsHeading.style.color = '#94a3b8';
-                } else {
-                    gpsHeading.textContent = headingText;
-                    gpsHeading.style.color = '#60a5fa';
-                }
-            } else {
-                gpsHeading.textContent = `Heading: Start driving...`;
-                gpsHeading.style.color = '#94a3b8';
-            }
-            
-            gpsAccuracy.textContent = `±${Math.round(currentPosition.accuracy)}m`;
-            gpsInfo.classList.add('active');
+            // GPS display removed - now handled in compass widget
         }
 
         function onPositionError(error) {
@@ -1721,7 +1662,6 @@
                 statusDot.classList.remove('active');
                 statusText.classList.remove('active');
                 statusText.textContent = 'Inactive';
-                gpsInfo.classList.remove('active');
                 alertsSection.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">✓</div>
