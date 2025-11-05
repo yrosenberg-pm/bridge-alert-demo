@@ -604,37 +604,7 @@
         }
 
         .control-area {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 12px 20px;
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
-            background: transparent;
-            flex-shrink: 0;
-            z-index: 1;
-            display: flex;
-            justify-content: flex-end;
-            pointer-events: none;
-        }
-
-        .control-btn.test {
-            background: rgba(168, 85, 247, 0.3);
-            color: #c4b5fd;
-            border: 1px solid rgba(168, 85, 247, 0.5);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            backdrop-filter: blur(10px);
-            pointer-events: auto;
-        }
-
-        .control-btn.test:active {
-            transform: scale(0.95);
-            background: rgba(168, 85, 247, 0.5);
+            display: none;
         }
 
         .control-buttons {
@@ -1008,6 +978,24 @@
             color: #fde047;
         }
 
+        .all-clear-message {
+            text-align: center;
+            padding: 8px 0;
+            display: none;
+        }
+
+        .all-clear-message.active {
+            display: block;
+        }
+
+        .all-clear-text {
+            font-size: 14px;
+            font-weight: 700;
+            color: #22c55e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .persistent-compass .compass-distance {
             font-size: 28px;
             font-weight: 800;
@@ -1026,7 +1014,23 @@
             font-weight: 600;
         }
 
-        .compass-location-info {
+        .all-clear-message {
+            text-align: center;
+            padding: 8px 0;
+            display: none;
+        }
+
+        .all-clear-message.active {
+            display: block;
+        }
+
+        .all-clear-text {
+            font-size: 14px;
+            font-weight: 700;
+            color: #22c55e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
@@ -1084,7 +1088,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v3.1</div>
+            <div class="version">v3.2</div>
         </div>
 
         <div class="vehicle-card">
@@ -1126,6 +1130,9 @@
                 <div class="compass-bearing">
                     Bridge at <span class="compass-bearing-value" id="persistentBearing">---°</span>
                 </div>
+            </div>
+            <div class="all-clear-message" id="allClearMessage">
+                <div class="all-clear-text">✓ All Clear</div>
             </div>
             <div class="compass-location-info">
                 <div class="location-item">
@@ -1169,12 +1176,6 @@
         </div>
 
         <div class="alerts-section" id="alertsSection"></div>
-
-        <div class="control-area">
-            <button class="control-btn test" id="testBtn">
-                <span>🧪 Test Mode</span>
-            </button>
-        </div>
     </div>
 
     <div class="modal-overlay" id="vehicleModal">
@@ -1195,7 +1196,6 @@
         let vehicleHeight = 15.0;
         let watchId = null;
         let isMonitoring = false;
-        let isTestMode = false;
         let currentPosition = null;
         let currentHeading = null;
         let previousPosition = null;
@@ -1216,15 +1216,6 @@
         let lastHapticAlert = {};
         let lastDisplayedAlerts = [];
         let nearestBridge = null;
-        let currentTestLocation = 0;
-
-        const testLocations = [
-            { name: 'Encino - Balboa/101', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
-            { name: 'Sherman Oaks - Ventura/405', lat: 34.15411722543085, lon: -118.46800838166973, heading: 0 },
-            { name: 'Sherman Oaks - Burbank/405', lat: 34.172153559602314, lon: -118.46768567630716, heading: 270 },
-            { name: 'Studio City - Coldwater/101', lat: 34.15674619828743, lon: -118.41376835430795, heading: 180 },
-            { name: 'Encino - Hayvenhurst/405', lat: 34.186652156787154, lon: -118.47418816016183, heading: 90 }
-        ];
 
         const bridges = [
             { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
@@ -1259,7 +1250,6 @@
         const directionDisplay = document.getElementById('directionDisplay');
         const latDisplay = document.getElementById('latDisplay');
         const lonDisplay = document.getElementById('lonDisplay');
-        const testBtn = document.getElementById('testBtn');
         const bridgeDetails = document.getElementById('bridgeDetails');
         const bridgeNameCompact = document.getElementById('bridgeNameCompact');
         const bridgeDistanceCompact = document.getElementById('bridgeDistanceCompact');
@@ -1267,6 +1257,7 @@
         const vehicleClearanceValue = document.getElementById('vehicleClearanceValue');
         const overByValue = document.getElementById('overByValue');
         const alertActionCompact = document.getElementById('alertActionCompact');
+        const allClearMessage = document.getElementById('allClearMessage');
 
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -1304,14 +1295,6 @@
             startMonitoring();
         });
 
-        testBtn.addEventListener('click', () => {
-            if (!isTestMode) {
-                startTestMode();
-            } else {
-                cycleTestLocation();
-            }
-        });
-
         function startMonitoring() {
             if (!navigator.geolocation) {
                 alert('GPS not available on this device');
@@ -1329,7 +1312,6 @@
             }
 
             isMonitoring = true;
-            isTestMode = false;
             bridgeAlertHistory = {};
             headingHistory = [];
             positionHistory = [];
@@ -1337,7 +1319,6 @@
             lastDisplayedAlerts = [];
             nearestBridge = null;
             updateUI();
-            updateTestButton();
         }
 
         function stopMonitoring() {
@@ -1349,7 +1330,6 @@
             window.removeEventListener('deviceorientation', onDeviceOrientation);
             
             isMonitoring = false;
-            isTestMode = false;
             currentPosition = null;
             currentHeading = null;
             deviceHeading = null;
@@ -1363,71 +1343,6 @@
             lastDisplayedAlerts = [];
             nearestBridge = null;
             updateUI();
-            updateTestButton();
-        }
-
-        function startTestMode() {
-            stopMonitoring();
-            isTestMode = true;
-            isMonitoring = true;
-            currentTestLocation = 0;
-            bridgeAlertHistory = {};
-            headingHistory = [];
-            positionHistory = [];
-            lastHapticAlert = {};
-            lastDisplayedAlerts = [];
-            nearestBridge = null;
-            simulateLocation(testLocations[currentTestLocation]);
-            updateUI();
-            updateTestButton();
-        }
-
-        function cycleTestLocation() {
-            if (!isTestMode) return;
-            currentTestLocation = (currentTestLocation + 1) % testLocations.length;
-            bridgeAlertHistory = {};
-            headingHistory = [];
-            positionHistory = [];
-            lastHapticAlert = {};
-            lastDisplayedAlerts = [];
-            nearestBridge = null;
-            simulateLocation(testLocations[currentTestLocation]);
-        }
-
-        function simulateLocation(location) {
-            previousPosition = currentPosition;
-            
-            currentPosition = {
-                latitude: location.lat,
-                longitude: location.lon,
-                accuracy: 10,
-                speed: 30 * 0.44704, // 30 mph in m/s
-                timestamp: Date.now()
-            };
-
-            positionHistory.push({
-                lat: currentPosition.latitude,
-                lon: currentPosition.longitude,
-                timestamp: currentPosition.timestamp
-            });
-            
-            if (positionHistory.length > POSITION_HISTORY_SIZE) {
-                positionHistory.shift();
-            }
-
-            currentHeading = location.heading;
-            addHeadingToHistory(currentHeading);
-
-            checkAlerts();
-            updatePersistentCompass();
-        }
-
-        function updateTestButton() {
-            if (isTestMode) {
-                testBtn.innerHTML = '<span>📍 Next Location</span>';
-            } else {
-                testBtn.innerHTML = '<span>🧪 Test Mode</span>';
-            }
         }
 
         function onDeviceOrientation(event) {
@@ -1510,6 +1425,8 @@
                 
                 persistentCompass.className = `persistent-compass bridge-detected ${nearestBridge.level}`;
                 
+                allClearMessage.classList.remove('active');
+                
                 // Trigger haptic feedback on first detection or level change
                 if (navigator.vibrate) {
                     const alertKey = nearestBridge.bridge.id;
@@ -1536,6 +1453,7 @@
                 bridgeAlertBanner.classList.remove('active');
                 bridgeDetails.classList.remove('active');
                 persistentCompass.className = 'persistent-compass';
+                allClearMessage.classList.add('active');
             }
         }
 
