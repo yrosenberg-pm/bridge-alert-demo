@@ -42,10 +42,6 @@
             flex-shrink: 0;
         }
 
-        .header.with-banner {
-            padding-top: 20px;
-        }
-
         .brand {
             font-size: 28px;
             font-weight: 800;
@@ -290,8 +286,7 @@
         .alerts-section {
             flex: 1;
             overflow-y: auto;
-            padding: 0 20px;
-            padding-bottom: 100px;
+            padding: 0 20px 20px;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
         }
@@ -477,7 +472,7 @@
 
         .compass-widget {
             margin-top: 20px;
-            padding: 24px;
+            padding: 16px;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 20px;
             border: 2px solid rgba(99, 102, 241, 0.3);
@@ -485,9 +480,9 @@
 
         .compass-container {
             position: relative;
-            width: 200px;
-            height: 200px;
-            margin: 0 auto 16px;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 12px;
         }
 
         .compass-rose {
@@ -495,38 +490,39 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            border: 3px solid rgba(100, 116, 139, 0.3);
             transition: transform 0.5s ease-out;
         }
 
         .compass-cardinal {
             position: absolute;
-            font-size: 18px;
-            font-weight: 800;
-            color: #94a3b8;
+            font-size: 20px;
+            font-weight: 900;
+            color: #64748b;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .compass-cardinal.n {
-            top: 8px;
+            top: 4px;
             left: 50%;
             transform: translateX(-50%);
             color: #60a5fa;
+            font-size: 24px;
         }
 
         .compass-cardinal.e {
-            right: 12px;
+            right: 8px;
             top: 50%;
             transform: translateY(-50%);
         }
 
         .compass-cardinal.s {
-            bottom: 8px;
+            bottom: 4px;
             left: 50%;
             transform: translateX(-50%);
         }
 
         .compass-cardinal.w {
-            left: 12px;
+            left: 8px;
             top: 50%;
             transform: translateY(-50%);
         }
@@ -536,11 +532,12 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            background: #60a5fa;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
             border-radius: 50%;
-            border: 3px solid #93c5fd;
+            border: 3px solid #1e293b;
+            box-shadow: 0 0 16px rgba(96, 165, 250, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
             z-index: 3;
         }
 
@@ -548,35 +545,37 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 4px;
-            height: 70px;
-            background: linear-gradient(180deg, #60a5fa 0%, rgba(96, 165, 250, 0.2) 100%);
+            width: 6px;
+            height: 75px;
+            background: linear-gradient(180deg, #60a5fa 0%, rgba(96, 165, 250, 0.3) 100%);
             transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg);
-            border-radius: 2px 2px 0 0;
+            border-radius: 3px 3px 0 0;
             z-index: 2;
             transition: transform 0.5s ease-out;
+            box-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
         }
 
         .compass-heading-arrow::before {
             content: '';
             position: absolute;
-            top: -8px;
+            top: -10px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 12px solid #60a5fa;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 16px solid #60a5fa;
+            filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.8));
         }
 
         .compass-bridge-arrow {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 6px;
-            height: 80px;
+            width: 8px;
+            height: 85px;
             transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg);
             z-index: 4;
@@ -591,29 +590,35 @@
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 80px solid #ef4444;
-            filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-bottom: 85px solid #ef4444;
+            filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.9));
         }
 
         .compass-bridge-arrow.warning::before {
             border-bottom-color: #f97316;
-            filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.6));
+            filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.9));
         }
 
         .compass-bridge-arrow.caution::before {
             border-bottom-color: #eab308;
-            filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.6));
+            filter: drop-shadow(0 0 16px rgba(234, 179, 8, 0.9));
         }
 
         .compass-bridge-arrow.critical::before {
-            animation: pulse-arrow 1s ease-in-out infinite;
+            animation: pulse-arrow 0.8s ease-in-out infinite;
         }
 
         @keyframes pulse-arrow {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { 
+                opacity: 1;
+                filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.9));
+            }
+            50% { 
+                opacity: 0.6;
+                filter: drop-shadow(0 0 24px rgba(239, 68, 68, 1));
+            }
         }
 
         .compass-info {
@@ -621,14 +626,14 @@
         }
 
         .compass-distance {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 800;
             color: white;
             margin-bottom: 4px;
         }
 
         .compass-bearing {
-            font-size: 14px;
+            font-size: 12px;
             color: #94a3b8;
             font-weight: 600;
         }
@@ -639,16 +644,7 @@
         }
 
         .control-area {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 16px 20px;
-            padding-bottom: max(16px, env(safe-area-inset-bottom));
-            background: #1e293b;
-            flex-shrink: 0;
-            z-index: 9999;
-            border-top: 2px solid #60a5fa;
+            display: none;
         }
 
         .control-buttons {
@@ -694,7 +690,257 @@
             transform: scale(0.98);
         }
 
-        .test-mode-banner {
+        .persistent-compass {
+            margin: 0 20px 16px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border-radius: 24px;
+            border: 2px solid rgba(99, 102, 241, 0.4);
+            flex-shrink: 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .persistent-compass.bridge-detected {
+            border-color: rgba(239, 68, 68, 0.8);
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.4), 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: pulse-border 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% {
+                border-color: rgba(239, 68, 68, 0.8);
+                box-shadow: 0 0 40px rgba(239, 68, 68, 0.4), 0 8px 32px rgba(0, 0, 0, 0.4);
+            }
+            50% {
+                border-color: rgba(239, 68, 68, 1);
+                box-shadow: 0 0 60px rgba(239, 68, 68, 0.6), 0 8px 32px rgba(0, 0, 0, 0.4);
+            }
+        }
+
+        .compass-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .compass-status-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        .status-pulse.alert {
+            background: #ef4444;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+            animation: pulse-dot-alert 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-dot-alert {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+
+        .persistent-compass .compass-container {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+
+        .compass-outer-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            border: 3px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .compass-inner-ring {
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 2px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .compass-tick {
+            position: absolute;
+            width: 2px;
+            height: 12px;
+            background: rgba(148, 163, 184, 0.4);
+            top: 8px;
+            left: 50%;
+            transform-origin: 50% 82px;
+            margin-left: -1px;
+        }
+
+        .compass-tick.major {
+            height: 16px;
+            width: 3px;
+            background: rgba(148, 163, 184, 0.6);
+            margin-left: -1.5px;
+        }
+
+        .persistent-compass .compass-info {
+            text-align: center;
+        }
+
+        .persistent-compass .compass-status {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .persistent-compass .compass-status.alert {
+            color: #ef4444;
+            font-size: 12px;
+            animation: pulse-text 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .bridge-alert-banner {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .bridge-alert-banner.active {
+            display: block;
+            animation: slide-in 0.3s ease-out;
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bridge-alert-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bridge-alert-icon {
+            font-size: 24px;
+            animation: shake 0.5s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .bridge-alert-text {
+            flex: 1;
+            margin: 0 12px;
+        }
+
+        .bridge-alert-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fca5a5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bridge-alert-subtitle {
+            font-size: 11px;
+            color: #fecaca;
+            margin-top: 2px;
+        }
+
+        .persistent-compass .compass-distance {
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 4px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .persistent-compass .compass-distance.alert {
+            color: #ef4444;
+        }
+
+        .persistent-compass .compass-bearing {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .compass-location-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .location-item {
+            text-align: center;
+        }
+
+        .location-label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .location-value {
+            font-size: 11px;
+            color: #e2e8f0;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .location-value.heading {
+            font-size: 16px;
+            color: #60a5fa;
+            font-weight: 800;
+        }
             padding: 8px;
             background: rgba(168, 85, 247, 0.9);
             text-align: center;
@@ -711,10 +957,6 @@
     </style>
 </head>
 <body>
-    <div class="test-mode-banner" id="testModeBanner">
-        🧪 TEST MODE - Simulated Location
-    </div>
-
     <div class="container">
         <div class="header" id="header">
             <div class="brand">Road Warrior</div>
@@ -746,6 +988,62 @@
             </div>
         </div>
 
+        <div class="persistent-compass" id="persistentCompass">
+            <div class="compass-header">
+                <div class="compass-status-group">
+                    <div class="status-pulse" id="statusPulse"></div>
+                    <div class="compass-status" id="compassStatus">Monitoring</div>
+                </div>
+            </div>
+            <div class="bridge-alert-banner" id="bridgeAlertBanner">
+                <div class="bridge-alert-content">
+                    <div class="bridge-alert-icon">⚠️</div>
+                    <div class="bridge-alert-text">
+                        <div class="bridge-alert-title">Bridge Detected</div>
+                        <div class="bridge-alert-subtitle" id="bridgeAlertSubtitle">Low clearance ahead</div>
+                    </div>
+                    <div class="bridge-alert-icon">⚠️</div>
+                </div>
+            </div>
+            <div class="compass-container">
+                <div class="compass-outer-ring"></div>
+                <div class="compass-inner-ring"></div>
+                <div class="compass-rose" id="persistentCompassRose">
+                    <div class="compass-cardinal n">N</div>
+                    <div class="compass-cardinal e">E</div>
+                    <div class="compass-cardinal s">S</div>
+                    <div class="compass-cardinal w">W</div>
+                </div>
+                <div class="compass-heading-arrow" id="persistentHeadingArrow"></div>
+                <div class="compass-bridge-arrow" id="persistentBridgeArrow" style="display: none;"></div>
+                <div class="compass-center"></div>
+            </div>
+            <div class="compass-info" id="persistentCompassInfo" style="display: none;">
+                <div class="compass-distance" id="persistentDistance">--</div>
+                <div class="compass-bearing">
+                    Bridge at <span class="compass-bearing-value" id="persistentBearing">---°</span>
+                </div>
+            </div>
+            <div class="compass-location-info">
+                <div class="location-item">
+                    <div class="location-label">Heading</div>
+                    <div class="location-value heading" id="headingDisplay">---°</div>
+                </div>
+                <div class="location-item">
+                    <div class="location-label">Direction</div>
+                    <div class="location-value heading" id="directionDisplay">--</div>
+                </div>
+                <div class="location-item">
+                    <div class="location-label">Latitude</div>
+                    <div class="location-value" id="latDisplay">---.------</div>
+                </div>
+                <div class="location-item">
+                    <div class="location-label">Longitude</div>
+                    <div class="location-value" id="lonDisplay">---.------</div>
+                </div>
+            </div>
+        </div>
+
         <div class="alerts-section" id="alertsSection">
             <div class="empty-state">
                 <div class="empty-icon">✓</div>
@@ -758,9 +1056,6 @@
             <div class="control-buttons">
                 <button class="control-btn start" id="controlBtn">
                     <span>Start Monitoring</span>
-                </button>
-                <button class="control-btn test" id="testBtn">
-                    <span>Test</span>
                 </button>
             </div>
         </div>
@@ -784,7 +1079,6 @@
         let vehicleHeight = 15.0;
         let watchId = null;
         let isMonitoring = false;
-        let isTestMode = false;
         let currentPosition = null;
         let currentHeading = null;
         let previousPosition = null;
@@ -803,16 +1097,8 @@
         let deviceHeading = null;
         let useDeviceCompass = true;
         let lastHapticAlert = {};
-
-        const testLocations = [
-            { name: 'Encino - Balboa/101 ✅', lat: 34.17046697384523, lon: -118.50114573681475, heading: 90 },
-            { name: 'Sherman Oaks - Ventura/405 ✅', lat: 34.15411722543085, lon: -118.46800838166973, heading: 0 },
-            { name: 'Sherman Oaks - Burbank/405 ✅', lat: 34.172153559602314, lon: -118.46768567630716, heading: 270 },
-            { name: 'Studio City - Coldwater/101 ✅', lat: 34.15674619828743, lon: -118.41376835430795, heading: 180 },
-            { name: 'West LA - I-10 Bridge ✅', lat: 34.0282723148279, lon: -118.44925192140647, heading: 90 },
-            { name: 'Encino - Hayvenhurst/405 ✅', lat: 34.186652156787154, lon: -118.47418816016183, heading: 90 }
-        ];
-        let currentTestLocation = 0;
+        let lastDisplayedAlerts = [];
+        let nearestBridge = null;
 
         const bridges = [
             { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass' },
@@ -823,8 +1109,6 @@
             { id: 'DAL-BRIDGE-001', name: 'Dallas Bridge', lat: 32.999500454468176, lon: -96.76771981164418, clearance: 16.75, location: 'Dallas, TX', type: 'underpass' }
         ];
 
-        const controlBtn = document.getElementById('controlBtn');
-        const testBtn = document.getElementById('testBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const gpsInfo = document.getElementById('gpsInfo');
@@ -832,14 +1116,27 @@
         const gpsHeading = document.getElementById('gpsHeading');
         const gpsAccuracy = document.getElementById('gpsAccuracy');
         const alertsSection = document.getElementById('alertsSection');
-        const testModeBanner = document.getElementById('testModeBanner');
-        const header = document.getElementById('header');
         const vehicleSpec = document.getElementById('vehicleSpec');
         const editVehicleBtn = document.getElementById('editVehicleBtn');
         const vehicleModal = document.getElementById('vehicleModal');
         const heightInput = document.getElementById('heightInput');
         const cancelBtn = document.getElementById('cancelBtn');
         const saveBtn = document.getElementById('saveBtn');
+        const persistentCompass = document.getElementById('persistentCompass');
+        const persistentCompassRose = document.getElementById('persistentCompassRose');
+        const persistentHeadingArrow = document.getElementById('persistentHeadingArrow');
+        const persistentBridgeArrow = document.getElementById('persistentBridgeArrow');
+        const persistentCompassInfo = document.getElementById('persistentCompassInfo');
+        const persistentDistance = document.getElementById('persistentDistance');
+        const persistentBearing = document.getElementById('persistentBearing');
+        const compassStatus = document.getElementById('compassStatus');
+        const statusPulse = document.getElementById('statusPulse');
+        const bridgeAlertBanner = document.getElementById('bridgeAlertBanner');
+        const bridgeAlertSubtitle = document.getElementById('bridgeAlertSubtitle');
+        const headingDisplay = document.getElementById('headingDisplay');
+        const directionDisplay = document.getElementById('directionDisplay');
+        const latDisplay = document.getElementById('latDisplay');
+        const lonDisplay = document.getElementById('lonDisplay');
 
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -872,16 +1169,9 @@
             vehicleSpec.textContent = `Height: ${vehicleHeight} feet`;
         }
 
-        controlBtn.addEventListener('click', () => {
-            isMonitoring ? stopMonitoring() : startMonitoring();
-        });
-
-        testBtn.addEventListener('click', () => {
-            if (!isMonitoring) {
-                startTestMode();
-            } else {
-                cycleTestLocation();
-            }
+        // Auto-start monitoring when app loads
+        window.addEventListener('load', () => {
+            startMonitoring();
         });
 
         function startMonitoring() {
@@ -901,11 +1191,12 @@
             }
 
             isMonitoring = true;
-            isTestMode = false;
             bridgeAlertHistory = {};
             headingHistory = [];
             positionHistory = [];
             lastHapticAlert = {};
+            lastDisplayedAlerts = [];
+            nearestBridge = null;
             updateUI();
         }
 
@@ -918,7 +1209,6 @@
             window.removeEventListener('deviceorientation', onDeviceOrientation);
             
             isMonitoring = false;
-            isTestMode = false;
             currentPosition = null;
             currentHeading = null;
             deviceHeading = null;
@@ -929,60 +1219,9 @@
             headingStableCount = 0;
             headingLocked = false;
             lastHapticAlert = {};
+            lastDisplayedAlerts = [];
+            nearestBridge = null;
             updateUI();
-        }
-
-        function startTestMode() {
-            isTestMode = true;
-            isMonitoring = true;
-            currentTestLocation = 0;
-            bridgeAlertHistory = {};
-            headingHistory = [];
-            positionHistory = [];
-            lastHapticAlert = {};
-            simulateLocation(testLocations[currentTestLocation]);
-            updateUI();
-        }
-
-        function cycleTestLocation() {
-            if (!isTestMode) return;
-            currentTestLocation = (currentTestLocation + 1) % testLocations.length;
-            bridgeAlertHistory = {};
-            headingHistory = [];
-            positionHistory = [];
-            lastHapticAlert = {};
-            simulateLocation(testLocations[currentTestLocation]);
-        }
-
-        function simulateLocation(location) {
-            previousPosition = currentPosition;
-            
-            currentPosition = {
-                latitude: location.lat,
-                longitude: location.lon,
-                accuracy: 10,
-                timestamp: Date.now()
-            };
-
-            positionHistory.push({
-                lat: currentPosition.latitude,
-                lon: currentPosition.longitude,
-                timestamp: currentPosition.timestamp
-            });
-            
-            if (positionHistory.length > POSITION_HISTORY_SIZE) {
-                positionHistory.shift();
-            }
-
-            currentHeading = location.heading;
-            addHeadingToHistory(currentHeading);
-
-            gpsCoords.textContent = `${location.name}`;
-            gpsHeading.textContent = `Heading: ${currentHeading}° ${getCardinalDirection(currentHeading)}`;
-            gpsAccuracy.textContent = `TEST`;
-            gpsInfo.classList.add('active');
-
-            checkAlerts();
         }
 
         function onDeviceOrientation(event) {
@@ -997,23 +1236,73 @@
             
             if (compassHeading !== null) {
                 deviceHeading = compassHeading;
-                updateCompassDisplay();
+                updatePersistentCompass();
             }
         }
 
-        function updateCompassDisplay() {
-            const compassRoses = document.querySelectorAll('.compass-rose');
-            const headingArrows = document.querySelectorAll('.compass-heading-arrow');
-            
+        function updatePersistentCompass() {
             const displayHeading = deviceHeading !== null ? deviceHeading : (currentHeading || 0);
             
-            compassRoses.forEach(rose => {
-                rose.style.transform = `rotate(${-displayHeading}deg)`;
-            });
+            persistentCompassRose.style.transform = `rotate(${-displayHeading}deg)`;
+            persistentHeadingArrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
             
-            headingArrows.forEach(arrow => {
-                arrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
-            });
+            // Update heading and direction display
+            if (currentHeading !== null) {
+                headingDisplay.textContent = `${Math.round(currentHeading)}°`;
+                directionDisplay.textContent = getCardinalDirection(currentHeading);
+            }
+            
+            // Update lat/lon display
+            if (currentPosition) {
+                latDisplay.textContent = currentPosition.latitude.toFixed(6);
+                lonDisplay.textContent = currentPosition.longitude.toFixed(6);
+            }
+            
+            if (nearestBridge) {
+                persistentBridgeArrow.style.display = 'block';
+                persistentBridgeArrow.style.transform = `translate(-50%, -100%) rotate(${nearestBridge.bearing}deg)`;
+                persistentBridgeArrow.className = `compass-bridge-arrow ${nearestBridge.level || 'caution'}`;
+                
+                persistentCompassInfo.style.display = 'block';
+                persistentDistance.textContent = `${nearestBridge.distance.toFixed(1)} mi`;
+                persistentDistance.classList.add('alert');
+                persistentBearing.textContent = `${nearestBridge.bearing}° ${getCardinalDirection(nearestBridge.bearing)}`;
+                
+                compassStatus.textContent = '⚠️ Bridge Alert';
+                compassStatus.classList.add('alert');
+                statusPulse.classList.add('alert');
+                
+                bridgeAlertBanner.classList.add('active');
+                bridgeAlertSubtitle.textContent = `${nearestBridge.distance.toFixed(1)} miles - ${nearestBridge.bridge.name}`;
+                
+                persistentCompass.classList.add('bridge-detected');
+                
+                // Trigger haptic feedback on first detection or level change
+                if (navigator.vibrate) {
+                    const alertKey = nearestBridge.bridge.id;
+                    const lastLevel = lastHapticAlert[alertKey];
+                    
+                    if (!lastLevel || lastLevel !== nearestBridge.level) {
+                        if (nearestBridge.level === 'critical') {
+                            navigator.vibrate([200, 100, 200]);
+                        } else if (nearestBridge.level === 'warning') {
+                            navigator.vibrate([150, 80, 150]);
+                        } else {
+                            navigator.vibrate([100]);
+                        }
+                        lastHapticAlert[alertKey] = nearestBridge.level;
+                    }
+                }
+            } else {
+                persistentBridgeArrow.style.display = 'none';
+                persistentCompassInfo.style.display = 'none';
+                persistentDistance.classList.remove('alert');
+                compassStatus.textContent = 'Monitoring';
+                compassStatus.classList.remove('alert');
+                statusPulse.classList.remove('alert');
+                bridgeAlertBanner.classList.remove('active');
+                persistentCompass.classList.remove('bridge-detected');
+            }
         }
 
         function onPositionUpdate(position) {
@@ -1088,6 +1377,8 @@
                 checkAlerts();
                 lastCheckTime = now;
             }
+            
+            updatePersistentCompass();
         }
 
         function updateGPSDisplay() {
@@ -1218,14 +1509,31 @@
             const alerts = [];
             const { latitude, longitude } = currentPosition;
             const now = Date.now();
+            const speedMph = (currentPosition.speed || 0) * 2.23694;
+            const isStopped = speedMph < 5;
 
             console.log('\n=== Alert Check ===');
+
+            // Find nearest bridge for persistent compass
+            let closestBridge = null;
+            let closestDistance = Infinity;
 
             for (const bridge of bridges) {
                 if (bridge.type === 'overpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
                 const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
+                
+                // Track nearest bridge for compass
+                if (distance < closestDistance && distance <= 2.0) {
+                    closestDistance = distance;
+                    closestBridge = {
+                        bridge,
+                        distance,
+                        bearing: Math.round(bearing),
+                        level: distance <= 0.5 ? 'critical' : distance <= 1.0 ? 'warning' : 'caution'
+                    };
+                }
                 
                 let headingDiff = null;
                 if (currentHeading !== null) {
@@ -1291,13 +1599,21 @@
                 }
             }
 
+            nearestBridge = closestBridge;
+
             for (const id in bridgeAlertHistory) {
                 if (now - bridgeAlertHistory[id].timestamp > 300000) {
                     delete bridgeAlertHistory[id];
                 }
             }
 
-            displayAlerts(alerts);
+            // If stopped, keep last displayed alerts
+            if (isStopped && lastDisplayedAlerts.length > 0) {
+                displayAlerts(lastDisplayedAlerts);
+            } else {
+                lastDisplayedAlerts = alerts;
+                displayAlerts(alerts);
+            }
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1354,14 +1670,8 @@
                     caution: '⚠️ CAUTION - MONITOR ROUTE'
                 }[alert.level];
 
-                const showCompass = index === 0;
+                const showCompass = false;
                 
-                let relativeBearing = alert.bearing;
-                if (currentHeading !== null) {
-                    relativeBearing = alert.bearing - currentHeading;
-                    if (relativeBearing < 0) relativeBearing += 360;
-                }
-
                 const compassHTML = showCompass ? `
                     <div class="compass-widget">
                         <div class="compass-container">
@@ -1420,35 +1730,14 @@
 
         function updateUI() {
             if (isMonitoring) {
-                if (isTestMode) {
-                    controlBtn.className = 'control-btn stop';
-                    controlBtn.innerHTML = '<span>Stop Test</span>';
-                    controlBtn.disabled = false;
-                    testBtn.innerHTML = '<span>Next Location</span>';
-                    testModeBanner.classList.add('active');
-                    header.classList.add('with-banner');
-                } else {
-                    controlBtn.className = 'control-btn stop';
-                    controlBtn.innerHTML = '<span>Stop Monitoring</span>';
-                    controlBtn.disabled = false;
-                    testBtn.innerHTML = '<span>Test</span>';
-                    testModeBanner.classList.remove('active');
-                    header.classList.remove('with-banner');
-                }
                 statusDot.classList.add('active');
                 statusText.classList.add('active');
                 statusText.textContent = 'Active';
             } else {
-                controlBtn.className = 'control-btn start';
-                controlBtn.innerHTML = '<span>Start Monitoring</span>';
-                controlBtn.disabled = false;
-                testBtn.innerHTML = '<span>Test</span>';
                 statusDot.classList.remove('active');
                 statusText.classList.remove('active');
                 statusText.textContent = 'Inactive';
                 gpsInfo.classList.remove('active');
-                testModeBanner.classList.remove('active');
-                header.classList.remove('with-banner');
                 alertsSection.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">✓</div>
