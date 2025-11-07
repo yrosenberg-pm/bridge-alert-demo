@@ -1110,7 +1110,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v3.9</div>
+            <div class="version">v4.0</div>
         </div>
 
         <div class="vehicle-card">
@@ -1245,7 +1245,7 @@
 
         const bridges = [
             { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
-            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass', orientation: 'east-west' },
+            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'overpass', orientation: 'east-west' },
             { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA', type: 'overpass', orientation: 'north-south' },
             { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass', orientation: 'east-west' },
             { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
@@ -1477,7 +1477,9 @@
                 
                 persistentCompass.className = `persistent-compass bridge-detected ${nearestBridge.level}`;
                 
+                // Hide "All Clear" when alert is active
                 allClearMessage.classList.remove('active');
+                allClearMessage.style.display = 'none';
                 
                 // Trigger haptic feedback on first detection or level change
                 if (navigator.vibrate) {
@@ -1508,6 +1510,7 @@
                 
                 // Always show "All Clear" when no bridge detected
                 allClearMessage.classList.add('active');
+                allClearMessage.style.display = 'block';
                 compassLocationInfo.classList.remove('hidden');
             }
         }
@@ -1656,26 +1659,26 @@
             // Bridge must be within 60 degrees (not perpendicular or behind)
             if (diff > 60) return false;
             
-            // Check if heading aligns with crossing the bridge orientation
+            // Check if heading aligns with the bridge orientation (traveling along it, not across it)
             if (bridge.orientation) {
                 const normalizedHeading = (heading + 360) % 360;
                 
                 if (bridge.orientation === 'east-west') {
-                    // Bridge runs E-W, should be approaching from N or S (heading ~0, 90, 180, 270)
-                    // Heading should be roughly N (315-45) or S (135-225)
-                    const isNorthSouth = (normalizedHeading >= 315 || normalizedHeading <= 45) || 
-                                        (normalizedHeading >= 135 && normalizedHeading <= 225);
-                    if (!isNorthSouth) {
-                        console.log(`  Bridge orientation check: E-W bridge, not heading N/S (heading: ${normalizedHeading}°)`);
-                        return false;
-                    }
-                } else if (bridge.orientation === 'north-south') {
-                    // Bridge runs N-S, should be approaching from E or W
+                    // Bridge runs E-W, should be heading E-W to encounter it
                     // Heading should be roughly E (45-135) or W (225-315)
                     const isEastWest = (normalizedHeading >= 45 && normalizedHeading <= 135) || 
                                       (normalizedHeading >= 225 && normalizedHeading <= 315);
                     if (!isEastWest) {
-                        console.log(`  Bridge orientation check: N-S bridge, not heading E/W (heading: ${normalizedHeading}°)`);
+                        console.log(`  Bridge orientation check: E-W bridge, not heading E/W (heading: ${normalizedHeading}°)`);
+                        return false;
+                    }
+                } else if (bridge.orientation === 'north-south') {
+                    // Bridge runs N-S, should be heading N-S to encounter it
+                    // Heading should be roughly N (315-45) or S (135-225)
+                    const isNorthSouth = (normalizedHeading >= 315 || normalizedHeading <= 45) || 
+                                        (normalizedHeading >= 135 && normalizedHeading <= 225);
+                    if (!isNorthSouth) {
+                        console.log(`  Bridge orientation check: N-S bridge, not heading N/S (heading: ${normalizedHeading}°)`);
                         return false;
                     }
                 }
@@ -1731,6 +1734,7 @@
             let closestDistance = Infinity;
 
             for (const bridge of bridges) {
+                // Only alert for underpasses (bridges you drive under)
                 if (bridge.type === 'overpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
