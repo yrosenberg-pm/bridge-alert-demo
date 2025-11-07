@@ -1110,7 +1110,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v3.8</div>
+            <div class="version">v3.9</div>
         </div>
 
         <div class="vehicle-card">
@@ -1806,24 +1806,33 @@
                 const isHeadingTowardsBridge = isHeadingTowards(bearing, currentHeading, bridge);
                 const isTooTall = vehicleHeight > bridge.clearance;
                 const speedMph = (currentPosition.speed || 0) * 2.23694;
-                const isMoving = speedMph > 1; // Must be moving to trigger alert
+                const isMoving = speedMph >= 5; // Must be moving at least 5 mph
+                const hasStableHeading = headingHistory.length >= HEADING_HISTORY_SIZE && !headingLocked;
+                const hasTrajectory = positionHistory.length >= POSITION_HISTORY_SIZE;
                 
                 console.log(`  Heading towards: ${isHeadingTowardsBridge}`);
                 console.log(`  Too tall: ${isTooTall}`);
                 console.log(`  Required checks: ${requiredChecks}`);
-                console.log(`  Is moving: ${isMoving} (${speedMph.toFixed(1)} mph)`);
+                console.log(`  Speed: ${speedMph.toFixed(1)} mph, Moving: ${isMoving}`);
+                console.log(`  Stable heading: ${hasStableHeading}, Trajectory data: ${hasTrajectory}`);
+                
+                // Skip alert if not moving with stable trajectory
+                if (!isMoving || !hasStableHeading || !hasTrajectory) {
+                    console.log(`  ⏸️ SKIPPED: Not actively driving`);
+                    delete bridgeAlertHistory[bridge.id];
+                    continue;
+                }
                 
                 let gettingCloser = false;
                 let trajectoryIntersects = false;
                 
-                if (isHeadingTowardsBridge && isTooTall && isMoving && positionHistory.length >= requiredChecks) {
+                if (isHeadingTowardsBridge && isTooTall && positionHistory.length >= requiredChecks) {
                     gettingCloser = isGettingCloser(bridge.lat, bridge.lon);
                     trajectoryIntersects = doesTrajectoryIntersectBridge(bridge.lat, bridge.lon);
                 }
                 
                 const shouldAlert = isTooTall && 
                                    isHeadingTowardsBridge && 
-                                   isMoving &&
                                    gettingCloser && 
                                    trajectoryIntersects &&
                                    positionHistory.length >= requiredChecks;
@@ -1862,6 +1871,18 @@
             }
 
             nearestBridge = closestBridge;
+
+            // Clear nearestBridge if not actively driving
+            if (currentPosition) {
+                const speedMph = (currentPosition.speed || 0) * 2.23694;
+                const isMoving = speedMph >= 5;
+                const hasStableHeading = headingHistory.length >= HEADING_HISTORY_SIZE && !headingLocked;
+                const hasTrajectory = positionHistory.length >= POSITION_HISTORY_SIZE;
+                
+                if (!isMoving || !hasStableHeading || !hasTrajectory) {
+                    nearestBridge = null;
+                }
+            }
 
             for (const id in bridgeAlertHistory) {
                 if (now - bridgeAlertHistory[id].timestamp > 300000) {
