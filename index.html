@@ -1110,7 +1110,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v4.0</div>
+            <div class="version">v4.1</div>
         </div>
 
         <div class="vehicle-card">
@@ -1660,23 +1660,24 @@
             if (diff > 60) return false;
             
             // Check if heading aligns with the bridge orientation (traveling along it, not across it)
+            // Using wider 60-degree windows for more tolerance
             if (bridge.orientation) {
                 const normalizedHeading = (heading + 360) % 360;
                 
                 if (bridge.orientation === 'east-west') {
                     // Bridge runs E-W, should be heading E-W to encounter it
-                    // Heading should be roughly E (45-135) or W (225-315)
-                    const isEastWest = (normalizedHeading >= 45 && normalizedHeading <= 135) || 
-                                      (normalizedHeading >= 225 && normalizedHeading <= 315);
+                    // East: 60-120°, West: 240-300°
+                    const isEastWest = (normalizedHeading >= 60 && normalizedHeading <= 120) || 
+                                      (normalizedHeading >= 240 && normalizedHeading <= 300);
                     if (!isEastWest) {
                         console.log(`  Bridge orientation check: E-W bridge, not heading E/W (heading: ${normalizedHeading}°)`);
                         return false;
                     }
                 } else if (bridge.orientation === 'north-south') {
                     // Bridge runs N-S, should be heading N-S to encounter it
-                    // Heading should be roughly N (315-45) or S (135-225)
-                    const isNorthSouth = (normalizedHeading >= 315 || normalizedHeading <= 45) || 
-                                        (normalizedHeading >= 135 && normalizedHeading <= 225);
+                    // North: 330-30° (wraps around 0), South: 150-210°
+                    const isNorthSouth = (normalizedHeading >= 330 || normalizedHeading <= 30) || 
+                                        (normalizedHeading >= 150 && normalizedHeading <= 210);
                     if (!isNorthSouth) {
                         console.log(`  Bridge orientation check: N-S bridge, not heading N/S (heading: ${normalizedHeading}°)`);
                         return false;
