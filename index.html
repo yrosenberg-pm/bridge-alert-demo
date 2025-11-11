@@ -805,6 +805,7 @@
 
         .persistent-compass .compass-info {
             text-align: center;
+            display: none;
         }
 
         .persistent-compass .compass-status {
@@ -913,12 +914,6 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 4px;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .bridge-details.collapsed .bridge-details-header {
-            margin-bottom: 0;
         }
 
         .bridge-name-compact {
@@ -933,13 +928,6 @@
             font-weight: 800;
             color: #ef4444;
             margin-left: 4px;
-            margin-right: 4px;
-        }
-
-        .details-toggle {
-            font-size: 9px;
-            color: #60a5fa;
-            font-weight: 600;
         }
 
         .bridge-details-content {
@@ -947,30 +935,32 @@
         }
 
         .clearance-compact {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 4px;
             margin-bottom: 4px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
         }
 
         .clearance-item-compact {
             text-align: center;
-            padding: 3px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
+            flex: 1;
         }
 
         .clearance-label-compact {
-            font-size: 6px;
+            font-size: 7px;
             color: #64748b;
             text-transform: uppercase;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             margin-bottom: 1px;
         }
 
         .clearance-value-compact {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 800;
             color: #e2e8f0;
         }
@@ -1110,7 +1100,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v4.1</div>
+            <div class="version">v4.2</div>
         </div>
 
         <div class="vehicle-card">
