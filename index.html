@@ -771,7 +771,7 @@
         .alerts-section {
             flex: 1;
             overflow-y: auto;
-            padding: 0 20px 80px;
+            padding: 0 20px 55px;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
         }
@@ -870,7 +870,7 @@
                 <div class="status-dot" id="statusDot"></div>
                 <div class="status-text" id="statusText">Inactive</div>
             </div>
-            <div class="version">v4.2</div>
+            <div class="version">v4.3</div>
         </div>
 
         <div class="vehicle-card">
@@ -982,9 +982,6 @@
         </div>
     </div>
 
-    <button class="debug-btn" id="debugBtn">Debug</button>
-    <button class="test-btn" id="testBtn">Test</button>
-
     <script>
         let vehicleHeight = 15.0;
         let watchId = null;
@@ -996,7 +993,7 @@
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 5;
+        const HEADING_HISTORY_SIZE = 8;
         const HEADING_CHANGE_THRESHOLD = 3;
         let headingWatchId = null;
         let headingStableCount = 0;
@@ -1010,6 +1007,7 @@
         let lastDisplayedAlerts = [];
         let nearestBridge = null;
         let distanceHistory = [];
+        const DISTANCE_HISTORY_SIZE = 3;
         const DISTANCE_HISTORY_SIZE = 3;
         let testMode = 0;
 
@@ -1082,8 +1080,6 @@
         const compassLocationInfo = document.getElementById('compassLocationInfo');
         const debugLog = document.getElementById('debugLog');
         const debugEntries = document.getElementById('debugEntries');
-        const debugBtn = document.getElementById('debugBtn');
-        const testBtn = document.getElementById('testBtn');
 
         function addDebugEntry(message, type = 'info') {
             const entry = document.createElement('div');
@@ -1383,7 +1379,7 @@
             }
 
             let newHeading = null;
-            const MINIMUM_SPEED_MPH = 0;
+            const MINIMUM_SPEED_MPH = 3;
             const speedMph = (position.coords.speed || 0) * 2.23694;
             
             if (position.coords.heading !== null && 
@@ -1420,7 +1416,7 @@
                 }
             }
 
-            if (speedMph >= 0) {
+            if (speedMph >= 3) {
                 useDeviceCompass = false;
             } else {
                 useDeviceCompass = true;
@@ -1541,7 +1537,7 @@
         }
 
         function doesTrajectoryIntersectBridge(bridgeLat, bridgeLon) {
-            if (positionHistory.length < 2) return true;
+            if (positionHistory.length < 2) return false; // Require trajectory data
             
             const p1 = positionHistory[positionHistory.length - 2];
             const p2 = positionHistory[positionHistory.length - 1];
@@ -1552,7 +1548,7 @@
             let angleDiff = Math.abs(trajectoryBearing - bearingToBridge);
             if (angleDiff > 180) angleDiff = 360 - angleDiff;
             
-            const intersects = angleDiff <= 30;
+            const intersects = angleDiff <= 25; // Tighter than 30
             
             console.log(`  Trajectory: ${trajectoryBearing.toFixed(0)}°, To bridge: ${bearingToBridge.toFixed(0)}°, Diff: ${angleDiff.toFixed(0)}° (intersects: ${intersects})`);
             
