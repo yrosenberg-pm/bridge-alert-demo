@@ -678,6 +678,141 @@
         .test-btn:active {
             transform: scale(0.95);
         }
+
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98);
+            border-top: 2px solid rgba(96, 165, 250, 0.4);
+            padding: 12px 20px 20px;
+            max-height: 40vh;
+            overflow-y: auto;
+            z-index: 999;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .debug-panel.active {
+            transform: translateY(0);
+        }
+
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .debug-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .debug-close {
+            padding: 4px 8px;
+            background: rgba(100, 116, 139, 0.3);
+            border: 1px solid rgba(100, 116, 139, 0.4);
+            border-radius: 6px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .debug-bridge-info {
+            font-size: 13px;
+            color: #e2e8f0;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .debug-checks {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .debug-check-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .debug-check-icon {
+            font-size: 14px;
+            font-weight: 800;
+            width: 18px;
+            flex-shrink: 0;
+        }
+
+        .debug-check-icon.pass {
+            color: #22c55e;
+        }
+
+        .debug-check-icon.fail {
+            color: #ef4444;
+        }
+
+        .debug-check-label {
+            color: #94a3b8;
+            flex: 1;
+        }
+
+        .debug-check-value {
+            color: #e2e8f0;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .debug-reason {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border-left: 3px solid #ef4444;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #fca5a5;
+            font-weight: 600;
+        }
+
+        .debug-reason.success {
+            background: rgba(34, 197, 94, 0.15);
+            border-left-color: #22c55e;
+            color: #86efac;
+        }
+
+        .debug-btn {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            padding: 8px 12px;
+            background: rgba(96, 165, 250, 0.9);
+            border: 2px solid rgba(96, 165, 250, 1);
+            border-radius: 12px;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.5);
+            transition: all 0.2s;
+        }
+
+        .debug-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -788,7 +923,18 @@
         <div class="content-section"></div>
     </div>
 
+    <button class="debug-btn" id="debugBtn">Debug</button>
     <button class="test-btn" id="testBtn">Test Alert</button>
+
+    <div class="debug-panel" id="debugPanel">
+        <div class="debug-header">
+            <div class="debug-title">Alert Debug Info</div>
+            <button class="debug-close" id="debugClose">Close</button>
+        </div>
+        <div class="debug-bridge-info" id="debugBridgeInfo">No bridge in range</div>
+        <div class="debug-checks" id="debugChecks"></div>
+        <div class="debug-reason" id="debugReason" style="display: none;"></div>
+    </div>
 
     <div class="modal-overlay" id="vehicleModal">
         <div class="modal">
@@ -815,7 +961,7 @@
         let lastCheckTime = 0;
         const CHECK_THROTTLE = 2000;
         let headingHistory = [];
-        const HEADING_HISTORY_SIZE = 8;
+        const HEADING_HISTORY_SIZE = 5;
         const HEADING_CHANGE_THRESHOLD = 3;
         let headingLocked = false;
         let positionHistory = [];
@@ -830,6 +976,11 @@
         const FINDER_RANGE = 2.0;
         let testMode = 0;
         let testModeActive = false;
+        let debugInfo = {
+            bridge: null,
+            checks: {},
+            reason: ''
+        };
 
         const testScenarios = [
             { name: 'No Alert', alert: null },
@@ -866,11 +1017,11 @@
         ];
 
         const bridges = [
-            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd over 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
-            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd over 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'overpass', orientation: 'east-west' },
-            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon over 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA', type: 'overpass', orientation: 'north-south' },
+            { id: 'EN-101-BALBOA-REAL', name: 'Balboa Blvd under 101 Freeway', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
+            { id: 'SO-405-BURBANK-REAL', name: 'Burbank Blvd under 405 Freeway', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass', orientation: 'east-west' },
+            { id: 'SC-101-COLDWATER-REAL', name: 'Coldwater Canyon under 101 Freeway', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, location: 'Studio City, CA', type: 'underpass', orientation: 'north-south' },
             { id: 'SO-405-VENTURA-REAL', name: 'Ventura Blvd under 405 Freeway', lat: 34.15411722543085, lon: -118.46800838166973, clearance: 13.0, location: 'Sherman Oaks, CA', type: 'underpass', orientation: 'east-west' },
-            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave over 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
+            { id: 'EN-405-HAYVENHURST-REAL', name: 'Hayvenhurst Ave under 405 Freeway', lat: 34.186652156787154, lon: -118.47418816016183, clearance: 13.0, location: 'Encino, CA', type: 'underpass', orientation: 'north-south' },
             { id: 'DAL-BRIDGE-001', name: 'Dallas Bridge', lat: 32.999500454468176, lon: -96.76771981164418, clearance: 16.75, location: 'Dallas, TX', type: 'underpass', orientation: 'east-west' }
         ];
 
@@ -903,6 +1054,20 @@
         const alertOverBy = document.getElementById('alertOverBy');
         const alertAction = document.getElementById('alertAction');
         const testBtn = document.getElementById('testBtn');
+        const debugBtn = document.getElementById('debugBtn');
+        const debugPanel = document.getElementById('debugPanel');
+        const debugClose = document.getElementById('debugClose');
+        const debugBridgeInfo = document.getElementById('debugBridgeInfo');
+        const debugChecks = document.getElementById('debugChecks');
+        const debugReason = document.getElementById('debugReason');
+
+        debugBtn.addEventListener('click', () => {
+            debugPanel.classList.toggle('active');
+        });
+
+        debugClose.addEventListener('click', () => {
+            debugPanel.classList.remove('active');
+        });
 
         editVehicleBtn.addEventListener('click', () => {
             heightInput.value = vehicleHeight;
@@ -933,7 +1098,16 @@
 
         testBtn.addEventListener('click', () => {
             testMode = (testMode + 1) % testScenarios.length;
+            testModeActive = true;
             const scenario = testScenarios[testMode];
+            
+            // Set fake position and heading for test
+            currentPosition = {
+                latitude: 34.170467,
+                longitude: -118.501146,
+                speed: 10
+            };
+            currentHeading = 45;
             
             if (scenario.alert) {
                 activeAlert = scenario.alert;
@@ -944,11 +1118,45 @@
                 };
             } else {
                 activeAlert = null;
+                nearestBridge = null;
             }
             
             updateBridgeFinder();
             updateAlertPanel();
         });
+
+        function updateDebugPanel() {
+            if (!debugInfo.bridge) {
+                debugBridgeInfo.textContent = 'No bridge in range';
+                debugChecks.innerHTML = '';
+                debugReason.style.display = 'none';
+                return;
+            }
+
+            debugBridgeInfo.textContent = `${debugInfo.bridge.name} - ${debugInfo.bridge.distance.toFixed(2)} mi`;
+            
+            const checksHTML = Object.entries(debugInfo.checks).map(([key, check]) => {
+                const icon = check.pass ? '✓' : '✗';
+                const iconClass = check.pass ? 'pass' : 'fail';
+                return `
+                    <div class="debug-check-item">
+                        <div class="debug-check-icon ${iconClass}">${icon}</div>
+                        <div class="debug-check-label">${check.label}</div>
+                        <div class="debug-check-value">${check.value}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            debugChecks.innerHTML = checksHTML;
+            
+            if (debugInfo.reason) {
+                debugReason.style.display = 'block';
+                debugReason.className = debugInfo.reason.includes('ALERT ACTIVE') ? 'debug-reason success' : 'debug-reason';
+                debugReason.textContent = debugInfo.reason;
+            } else {
+                debugReason.style.display = 'none';
+            }
+        }
 
         function updateVehicleDisplay() {
             vehicleSpec.textContent = `Height: ${vehicleHeight.toFixed(1)} feet`;
@@ -1153,8 +1361,10 @@
 
             const now = Date.now();
             if (now - lastCheckTime >= CHECK_THROTTLE) {
+                if (!testModeActive) {
+                    checkAlerts();
+                }
                 updateBridgeFinder();
-                checkAlerts();
                 updateAlertPanel();
                 lastCheckTime = now;
             } else {
@@ -1223,27 +1433,8 @@
             let diff = Math.abs(bearing - heading);
             if (diff > 180) diff = 360 - diff;
             
-            if (diff > 60) return false;
-            
-            if (bridge.orientation) {
-                const normalizedHeading = (heading + 360) % 360;
-                
-                if (bridge.orientation === 'east-west') {
-                    const isEastWest = (normalizedHeading >= 60 && normalizedHeading <= 120) || 
-                                      (normalizedHeading >= 240 && normalizedHeading <= 300);
-                    if (!isEastWest) {
-                        return false;
-                    }
-                } else if (bridge.orientation === 'north-south') {
-                    const isNorthSouth = (normalizedHeading >= 330 || normalizedHeading <= 30) || 
-                                        (normalizedHeading >= 150 && normalizedHeading <= 210);
-                    if (!isNorthSouth) {
-                        return false;
-                    }
-                }
-            }
-            
-            return true;
+            // Simple check: are you heading within 75 degrees of the bridge?
+            return diff <= 75;
         }
 
         function isGettingCloser(bridgeLat, bridgeLon) {
@@ -1270,7 +1461,7 @@
             let angleDiff = Math.abs(trajectoryBearing - bearingToBridge);
             if (angleDiff > 180) angleDiff = 360 - angleDiff;
             
-            const intersects = angleDiff <= 25;
+            const intersects = angleDiff <= 35;
             
             return intersects;
         }
@@ -1287,6 +1478,13 @@
 
             // Find approaching bridge for Alert Panel (with strict criteria)
             let approachingBridge = null;
+            
+            // Reset debug info
+            debugInfo = {
+                bridge: null,
+                checks: {},
+                reason: ''
+            };
 
             for (const bridge of bridges) {
                 if (bridge.type === 'overpass') continue;
@@ -1322,10 +1520,11 @@
                 
                 // Check if bridge is behind
                 let bridgeBehind = false;
+                let headingDiff = null;
                 if (currentHeading !== null) {
-                    let headingDiff = Math.abs(bearing - currentHeading);
+                    headingDiff = Math.abs(bearing - currentHeading);
                     if (headingDiff > 180) headingDiff = 360 - headingDiff;
-                    bridgeBehind = headingDiff > 60;
+                    bridgeBehind = headingDiff > 75;
                 }
                 
                 // Clear alert if moving away or bridge behind
@@ -1334,31 +1533,94 @@
                     continue;
                 }
                 
-                // Check for Alert Panel - strict criteria
-                if (distance <= 2.0) {
+                // Check for Alert Panel - with debug info for closest bridge
+                if (distance <= 2.0 && distance === closestFinderDistance) {
+                    debugInfo.bridge = {
+                        name: bridge.name,
+                        distance: distance
+                    };
+                    
                     let requiredChecks = 1;
                     if (distance > 1.5) {
-                        requiredChecks = 3;
+                        requiredChecks = 2;
                     } else if (distance > 0.5) {
                         requiredChecks = 2;
                     }
                     
+                    const speedMph = (currentPosition.speed || 0) * 2.23694;
                     const isHeadingTowardsBridge = isHeadingTowards(bearing, currentHeading, bridge);
                     const isTooTall = vehicleHeight > bridge.clearance;
                     const hasStableHeading = headingHistory.length >= HEADING_HISTORY_SIZE && !headingLocked;
                     const hasTrajectory = positionHistory.length >= POSITION_HISTORY_SIZE;
                     
+                    debugInfo.checks.speed = {
+                        pass: speedMph >= 0,
+                        label: 'Moving',
+                        value: `${speedMph.toFixed(1)} mph`
+                    };
+                    
+                    debugInfo.checks.tooTall = {
+                        pass: isTooTall,
+                        label: 'Too tall',
+                        value: `${vehicleHeight}' > ${bridge.clearance}'`
+                    };
+                    
+                    debugInfo.checks.heading = {
+                        pass: hasStableHeading,
+                        label: 'Stable heading',
+                        value: `${headingHistory.length}/${HEADING_HISTORY_SIZE} samples`
+                    };
+                    
+                    debugInfo.checks.trajectory = {
+                        pass: hasTrajectory,
+                        label: 'Trajectory data',
+                        value: `${positionHistory.length}/${POSITION_HISTORY_SIZE} samples`
+                    };
+                    
+                    if (headingDiff !== null) {
+                        debugInfo.checks.headingTowards = {
+                            pass: isHeadingTowardsBridge,
+                            label: 'Heading towards',
+                            value: `${headingDiff.toFixed(0)}° diff`
+                        };
+                    }
+                    
                     if (!hasStableHeading || !hasTrajectory) {
                         delete bridgeAlertHistory[bridge.id];
+                        debugInfo.reason = '⏸️ Waiting for GPS data...';
                         continue;
                     }
                     
                     let gettingCloser = false;
                     let trajectoryIntersects = false;
+                    let trajectoryAngle = null;
                     
                     if (isHeadingTowardsBridge && isTooTall && positionHistory.length >= requiredChecks) {
                         gettingCloser = isGettingCloser(bridge.lat, bridge.lon);
-                        trajectoryIntersects = doesTrajectoryIntersectBridge(bridge.lat, bridge.lon);
+                        
+                        if (positionHistory.length >= 2) {
+                            const p1 = positionHistory[positionHistory.length - 2];
+                            const p2 = positionHistory[positionHistory.length - 1];
+                            const trajectoryBearing = calculateBearing(p1.lat, p1.lon, p2.lat, p2.lon);
+                            const bearingToBridge = calculateBearing(p2.lat, p2.lon, bridge.lat, bridge.lon);
+                            trajectoryAngle = Math.abs(trajectoryBearing - bearingToBridge);
+                            if (trajectoryAngle > 180) trajectoryAngle = 360 - trajectoryAngle;
+                            trajectoryIntersects = trajectoryAngle <= 35;
+                        }
+                    }
+                    
+                    debugInfo.checks.gettingCloser = {
+                        pass: gettingCloser,
+                        label: 'Getting closer',
+                        value: gettingCloser ? 'Yes' : 'No'
+                    };
+                    
+                    if (trajectoryAngle !== null) {
+                        debugInfo.checks.trajectoryIntersects = {
+                            pass: trajectoryIntersects,
+                            label: 'Trajectory intersects',
+                            value: `${trajectoryAngle.toFixed(0)}° (need ≤35°)`
+                        };
                     }
                     
                     const shouldAlert = isTooTall && 
@@ -1386,9 +1648,21 @@
                                 distance: distance,
                                 timestamp: now
                             };
+                            
+                            debugInfo.reason = `✅ ALERT ACTIVE: ${level.toUpperCase()}`;
                         }
                     } else {
                         delete bridgeAlertHistory[bridge.id];
+                        
+                        if (!isTooTall) {
+                            debugInfo.reason = '✓ Bridge clearance OK';
+                        } else if (!isHeadingTowardsBridge) {
+                            debugInfo.reason = '✗ Not heading towards bridge';
+                        } else if (!gettingCloser) {
+                            debugInfo.reason = '✗ Not getting closer';
+                        } else if (!trajectoryIntersects) {
+                            debugInfo.reason = '✗ Trajectory not intersecting';
+                        }
                     }
                 }
             }
@@ -1405,6 +1679,8 @@
                     delete bridgeAlertHistory[id];
                 }
             }
+            
+            updateDebugPanel();
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
