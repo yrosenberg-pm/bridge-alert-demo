@@ -7,23 +7,31 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Road Warrior - Bridge Alert</title>
     <script>
-        // Set icon dynamically from hardcoded data
+        // Set icon dynamically from hardcoded data with cache busting
         const iconData = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%234f9bff;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%232563eb;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='200' height='200' rx='40' fill='url(%23grad)'/%3E%3Cpath d='M100 30 C120 35 140 40 160 45 L160 100 C160 130 140 155 100 170 C60 155 40 130 40 100 L40 45 C60 40 80 35 100 30 Z' fill='white'/%3E%3Cpath d='M100 50 C115 54 130 58 145 62 L145 100 C145 122 130 140 100 152 C70 140 55 122 55 100 L55 62 C70 58 85 54 100 50 Z' fill='url(%23grad)'/%3E%3C/svg%3E";
         
         // Create favicon
         const favicon = document.createElement('link');
         favicon.rel = 'icon';
+        favicon.type = 'image/svg+xml';
         favicon.href = iconData;
         document.head.appendChild(favicon);
         
-        // Create apple touch icons
-        [180, 167, 152, 120].forEach(size => {
+        // Create apple touch icons with explicit type and cache buster
+        const timestamp = Date.now();
+        [180, 167, 152, 120, ''].forEach(size => {
             const link = document.createElement('link');
             link.rel = 'apple-touch-icon';
-            link.sizes = `${size}x${size}`;
-            link.href = iconData;
+            if (size) link.sizes = `${size}x${size}`;
+            link.href = iconData + '?v=' + timestamp;
             document.head.appendChild(link);
         });
+        
+        // Also add precomposed for older iOS
+        const precomposed = document.createElement('link');
+        precomposed.rel = 'apple-touch-icon-precomposed';
+        precomposed.href = iconData + '?v=' + timestamp;
+        document.head.appendChild(precomposed);
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
