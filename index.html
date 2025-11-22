@@ -34,14 +34,17 @@
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html {
+        html, body {
             background: hsl(222, 47%, 11%);
+            margin: 0;
+            padding: 0;
+            height: 100%;
         }
         body { 
             font-family: 'Inter', system-ui, sans-serif;
-            background: hsl(222, 47%, 11%);
             color: hsl(210, 40%, 98%);
             -webkit-font-smoothing: antialiased;
+            padding-top: env(safe-area-inset-top);
         }
         .compass-tick {
             position: absolute;
@@ -63,7 +66,7 @@
                 <h1 class="font-display font-bold text-lg leading-none">Road Warrior</h1>
                 <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v4.5</span>
+                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v4.6</span>
                 </div>
             </div>
         </div>
