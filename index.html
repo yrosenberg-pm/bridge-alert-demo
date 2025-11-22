@@ -79,7 +79,7 @@
                 </div>
                 <div>
                     <div class="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Vehicle Height</div>
-                    <div class="text-lg font-mono font-bold" id="vehicleHeight">15.0 ft</div>
+                    <div class="text-lg font-mono font-bold" id="vehicleHeight">15 ft</div>
                 </div>
             </div>
             <button class="h-7 px-3 text-xs font-semibold border border-white/10 hover:bg-white/5 rounded-lg transition-colors" onclick="openEditModal()">
@@ -89,7 +89,7 @@
 
         <!-- Compass Section -->
         <div class="relative py-4">
-            <!-- Bearing Display (Top Right) -->
+            <!-- Bearing Display -->
             <div class="absolute top-0 right-0 text-right">
                 <div class="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Bearing</div>
                 <div class="text-base font-mono font-bold text-primary">
@@ -99,13 +99,10 @@
             
             <!-- Compass -->
             <div class="relative w-56 h-56 mx-auto flex items-center justify-center">
-                <!-- Outer Ring -->
                 <div class="absolute inset-0 rounded-full border-2 border-primary/20 bg-black/20 backdrop-blur-sm shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]"></div>
-                
-                <!-- Ticks -->
                 <div class="absolute inset-0" id="compassTicks"></div>
                 
-                <!-- Cardinal Points (Rotating) -->
+                <!-- Cardinal Points -->
                 <div class="absolute inset-0 w-full h-full transition-transform duration-300 ease-out" id="cardinalPoints">
                     <div class="absolute top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-primary">N</div>
                     <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-bold text-primary/50">S</div>
@@ -113,7 +110,7 @@
                     <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary/50">E</div>
                 </div>
 
-                <!-- Needle (Points to bridge) -->
+                <!-- Needle -->
                 <div class="absolute w-full h-full flex items-center justify-center transition-transform duration-300 ease-out" id="compassNeedle" style="display: none;">
                     <div class="relative h-full w-8 flex flex-col items-center justify-start py-8">
                         <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[16px] border-b-primary" style="filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.8));"></div>
@@ -142,7 +139,7 @@
             </div>
         </div>
 
-        <!-- Alert Panel (Hidden by default) -->
+        <!-- Alert Panel -->
         <div id="alertPanel" class="rounded-xl border border-primary/30 bg-blue-500/10 p-4 backdrop-blur-md transition-all duration-500" style="display: none;">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-2">
@@ -152,11 +149,11 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-base font-display font-bold uppercase tracking-wide text-primary">BRIDGE AHEAD</h3>
+                        <h3 class="text-base font-display font-bold uppercase tracking-wide text-primary" id="alertTitle">BRIDGE AHEAD</h3>
                         <p class="text-xs opacity-80 font-mono" id="bridgeName">Balboa Blvd over 101 Fwy</p>
                     </div>
                 </div>
-                <button class="px-3 py-1 text-[10px] font-semibold border border-white/10 hover:bg-white/5 rounded-full transition-colors">
+                <button class="px-3 py-1 text-[10px] font-semibold border border-white/10 hover:bg-white/5 rounded-full transition-colors" id="severityBadge">
                     INFO
                 </button>
             </div>
@@ -169,7 +166,7 @@
                 <div class="bg-background/20 rounded-lg p-2 text-center relative overflow-hidden">
                     <div class="absolute inset-0 bg-red-500/20 animate-pulse" id="youHighlight" style="display: none;"></div>
                     <div class="text-[10px] uppercase opacity-70 mb-1 relative z-10">You</div>
-                    <div class="text-xl font-bold font-mono relative z-10 text-primary" id="youHeight">15.0'</div>
+                    <div class="text-xl font-bold font-mono relative z-10 text-primary" id="youHeight">15'</div>
                 </div>
                 <div class="bg-background/20 rounded-lg p-2 text-center">
                     <div class="text-[10px] uppercase opacity-70 mb-1">Clearance</div>
@@ -194,7 +191,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-sm text-muted-foreground mb-2 block">Height (feet)</label>
-                    <input type="number" id="heightInput" step="0.5" min="10" max="16" value="15.0" class="w-full bg-muted border border-white/10 rounded-lg px-4 py-2 text-lg font-mono focus:outline-none focus:border-primary">
+                    <input type="number" id="heightInput" step="0.5" min="10" max="16" value="15" class="w-full bg-muted border border-white/10 rounded-lg px-4 py-2 text-lg font-mono focus:outline-none focus:border-primary">
                 </div>
                 <div class="flex gap-3">
                     <button onclick="closeEditModal()" class="flex-1 h-10 bg-muted hover:bg-muted/80 rounded-lg font-semibold transition-colors">
@@ -210,39 +207,60 @@
 
     <script>
         // State
-        let vehicleHeight = 15.0;
-        let watchId = null;
-        let isMonitoring = false;
-        let currentPosition = null;
-        let currentHeading = null;
-        let previousPosition = null;
-        let headingHistory = [];
-        let positionHistory = [];
-        let deviceHeading = null;
-        let nearestBridge = null;
+        const state = {
+            vehicleHeight: 15,
+            watchId: null,
+            isMonitoring: false,
+            currentPosition: null,
+            currentHeading: null,
+            previousPosition: null,
+            headingHistory: [],
+            positionHistory: [],
+            deviceHeading: null,
+            nearestBridge: null,
+            inTestMode: false,
+            testScenario: 0,
+            lastCheckTime: 0
+        };
         
-        const HEADING_HISTORY_SIZE = 15;
-        const POSITION_HISTORY_SIZE = 5;
-        const CHECK_THROTTLE = 2000;
-        let lastCheckTime = 0;
+        const CONFIG = {
+            HEADING_HISTORY_SIZE: 15,
+            POSITION_HISTORY_SIZE: 5,
+            CHECK_THROTTLE: 2000,
+            MIN_SPEED_MPH: 5,
+            MAX_ALERT_DISTANCE: 2.0
+        };
 
         // Bridge database
-        const bridges = [
-            { id: 'EN-101-BALBOA', name: 'Balboa Blvd over 101 Fwy', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.5, type: 'underpass', orientation: 'north-south' },
-            { id: 'SO-405-BURBANK', name: 'Burbank Blvd over 405 Fwy', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, type: 'underpass', orientation: 'east-west' },
-            { id: 'SC-101-COLDWATER', name: 'Coldwater Canyon over 101 Fwy', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, type: 'underpass', orientation: 'north-south' }
+        const BRIDGES = [
+            { id: 'EN-101-BALBOA', name: 'Balboa Blvd over 101 Fwy', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.5, type: 'underpass' },
+            { id: 'SO-405-BURBANK', name: 'Burbank Blvd over 405 Fwy', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, type: 'underpass' },
+            { id: 'SC-101-COLDWATER', name: 'Coldwater Canyon over 101 Fwy', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, type: 'underpass' }
         ];
 
-        // Initialize compass ticks
-        const ticksContainer = document.getElementById('compassTicks');
-        [0, 45, 90, 135, 180, 225, 270, 315].forEach(deg => {
-            const tick = document.createElement('div');
-            tick.className = 'compass-tick';
-            tick.style.transform = `rotate(${deg}deg)`;
-            tick.innerHTML = '<div class="mx-auto w-0.5 h-3 bg-primary/40 mt-1"></div>';
-            ticksContainer.appendChild(tick);
-        });
+        // DOM elements cache
+        const els = {};
+        
+        function initElements() {
+            const ids = ['compassTicks', 'cardinalPoints', 'compassNeedle', 'bearingValue', 'bearingDir', 
+                         'distanceValue', 'latValue', 'lonValue', 'alertPanel', 'alertTitle', 'bridgeName', 
+                         'bridgeHeight', 'youHeight', 'clearanceValue', 'youHighlight', 'vehicleHeight', 
+                         'severityBadge', 'editModal', 'heightInput', 'testBtn'];
+            ids.forEach(id => els[id] = document.getElementById(id));
+        }
 
+        // Initialize compass ticks
+        function initCompass() {
+            [0, 45, 90, 135, 180, 225, 270, 315].forEach(deg => {
+                const tick = document.createElement('div');
+                tick.className = 'compass-tick';
+                tick.style.transform = `rotate(${deg}deg)`;
+                tick.innerHTML = '<div class="mx-auto w-0.5 h-3 bg-primary/40 mt-1"></div>';
+                els.compassTicks.appendChild(tick);
+            });
+        }
+
+        // Utility functions
         function getCardinalDirection(bearing) {
             const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
             return dirs[Math.round(((bearing % 360) / 45)) % 8];
@@ -252,23 +270,26 @@
             const R = 3959;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         function calculateBearing(lat1, lon1, lat2, lon2) {
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
-            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) - Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) - 
+                     Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
             return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
         }
 
         function getSmoothedHeading() {
-            if (!headingHistory.length) return null;
+            if (!state.headingHistory.length) return null;
             let sumX = 0, sumY = 0, totalWeight = 0;
-            for (let i = 0; i < headingHistory.length; i++) {
+            for (let i = 0; i < state.headingHistory.length; i++) {
                 const weight = Math.pow(2, i);
-                const rad = headingHistory[i] * Math.PI / 180;
+                const rad = state.headingHistory[i] * Math.PI / 180;
                 sumX += Math.cos(rad) * weight;
                 sumY += Math.sin(rad) * weight;
                 totalWeight += weight;
@@ -276,114 +297,110 @@
             return (Math.atan2(sumY / totalWeight, sumX / totalWeight) * 180 / Math.PI + 360) % 360;
         }
 
-        function updateCompass() {
-            const displayHeading = deviceHeading !== null ? deviceHeading : (currentHeading || 0);
-            document.getElementById('cardinalPoints').style.transform = `rotate(${-displayHeading}deg)`;
-            
-            if (nearestBridge) {
-                const relativeBearing = nearestBridge.bearing - displayHeading;
-                const needle = document.getElementById('compassNeedle');
-                needle.style.display = 'flex';
-                needle.style.transform = `rotate(${relativeBearing}deg)`;
-                
-                document.getElementById('bearingValue').textContent = nearestBridge.bearing;
-                document.getElementById('bearingDir').textContent = getCardinalDirection(nearestBridge.bearing);
-                document.getElementById('distanceValue').textContent = nearestBridge.distance.toFixed(1);
+        function getSeverityConfig(distance) {
+            if (distance <= 0.5) {
+                return {
+                    severity: 'critical',
+                    panelClass: 'rounded-xl border-2 border-red-500/50 bg-red-600/20 p-4 backdrop-blur-md transition-all duration-500 animate-pulse',
+                    titleColor: 'text-red-500',
+                    titleText: 'CRITICAL ALERT',
+                    badgeText: 'CRITICAL',
+                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-red-500/70 text-red-500 bg-red-500/20'
+                };
+            } else if (distance <= 1.0) {
+                return {
+                    severity: 'warning',
+                    panelClass: 'rounded-xl border border-orange-600/50 bg-orange-600/20 p-4 backdrop-blur-md transition-all duration-500',
+                    titleColor: 'text-orange-500',
+                    titleText: 'WARNING',
+                    badgeText: 'WARNING',
+                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-orange-500/70 text-orange-500 bg-orange-500/20'
+                };
             } else {
-                document.getElementById('compassNeedle').style.display = 'none';
-                if (currentHeading !== null) {
-                    document.getElementById('bearingValue').textContent = Math.round(currentHeading);
-                    document.getElementById('bearingDir').textContent = getCardinalDirection(currentHeading);
+                return {
+                    severity: 'caution',
+                    panelClass: 'rounded-xl border border-yellow-500/40 bg-yellow-500/15 p-4 backdrop-blur-md transition-all duration-500',
+                    titleColor: 'text-yellow-400',
+                    titleText: 'CAUTION',
+                    badgeText: 'CAUTION',
+                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-yellow-500/70 text-yellow-400 bg-yellow-500/20'
+                };
+            }
+        }
+
+        function updateCompass() {
+            const displayHeading = state.deviceHeading !== null ? state.deviceHeading : (state.currentHeading || 0);
+            els.cardinalPoints.style.transform = `rotate(${-displayHeading}deg)`;
+            
+            if (state.nearestBridge) {
+                const relativeBearing = state.nearestBridge.bearing - displayHeading;
+                els.compassNeedle.style.display = 'flex';
+                els.compassNeedle.style.transform = `rotate(${relativeBearing}deg)`;
+                
+                els.bearingValue.textContent = state.nearestBridge.bearing;
+                els.bearingDir.textContent = getCardinalDirection(state.nearestBridge.bearing);
+                els.distanceValue.textContent = state.nearestBridge.distance.toFixed(1);
+            } else {
+                els.compassNeedle.style.display = 'none';
+                if (state.currentHeading !== null) {
+                    els.bearingValue.textContent = Math.round(state.currentHeading);
+                    els.bearingDir.textContent = getCardinalDirection(state.currentHeading);
                 }
-                document.getElementById('distanceValue').textContent = '--';
+                els.distanceValue.textContent = '--';
             }
         }
 
         function updateAlertPanel() {
-            const panel = document.getElementById('alertPanel');
-            
-            if (nearestBridge && vehicleHeight > nearestBridge.bridge.clearance) {
-                panel.style.display = 'block';
+            if (state.nearestBridge && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
+                els.alertPanel.style.display = 'block';
                 
-                // Determine severity based on distance
-                const distance = nearestBridge.distance;
-                let severity = 'info'; // default
-                let panelClass = 'rounded-xl border border-primary/30 bg-blue-500/10 p-4 backdrop-blur-md transition-all duration-500';
-                let titleColor = 'text-primary';
+                const config = getSeverityConfig(state.nearestBridge.distance);
                 
-                if (distance <= 0.5) {
-                    // CRITICAL: Very close
-                    severity = 'critical';
-                    panelClass = 'rounded-xl border-2 border-red-500/50 bg-red-600/20 p-4 backdrop-blur-md transition-all duration-500 animate-pulse';
-                    titleColor = 'text-red-500';
-                } else if (distance <= 1.0) {
-                    // WARNING: Medium close
-                    severity = 'warning';
-                    panelClass = 'rounded-xl border border-orange-600/50 bg-orange-600/20 p-4 backdrop-blur-md transition-all duration-500';
-                    titleColor = 'text-orange-500';
-                } else {
-                    // CAUTION: Far but should know
-                    severity = 'caution';
-                    panelClass = 'rounded-xl border border-yellow-500/40 bg-yellow-500/15 p-4 backdrop-blur-md transition-all duration-500';
-                    titleColor = 'text-yellow-400';
-                }
+                els.alertPanel.className = config.panelClass;
+                els.alertTitle.textContent = config.titleText;
+                els.alertTitle.className = `text-base font-display font-bold uppercase tracking-wide ${config.titleColor}`;
+                els.severityBadge.textContent = config.badgeText;
+                els.severityBadge.className = config.badgeClass;
                 
-                panel.className = panelClass;
+                els.bridgeName.textContent = state.nearestBridge.bridge.name;
+                els.bridgeHeight.textContent = `${state.nearestBridge.bridge.clearance}'`;
+                els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
                 
-                const titleText = {
-                    critical: 'CRITICAL ALERT',
-                    warning: 'WARNING',
-                    caution: 'BRIDGE AHEAD'
-                }[severity];
-                
-                document.getElementById('alertTitle').textContent = titleText;
-                document.getElementById('alertTitle').className = `text-base font-display font-bold uppercase tracking-wide ${titleColor}`;
-                
-                document.getElementById('bridgeName').textContent = nearestBridge.bridge.name;
-                document.getElementById('bridgeHeight').textContent = `${nearestBridge.bridge.clearance}'`;
-                document.getElementById('youHeight').textContent = `${vehicleHeight.toFixed(1)}'`;
-                
-                const clearance = nearestBridge.bridge.clearance - vehicleHeight;
-                document.getElementById('clearanceValue').textContent = `${clearance.toFixed(1)}'`;
-                document.getElementById('clearanceValue').className = `text-xl font-bold font-mono ${clearance < 0 ? 'text-red-500' : 'text-emerald-500'}`;
-                
-                document.getElementById('youHighlight').style.display = clearance < 0 ? 'block' : 'none';
+                const clearance = state.nearestBridge.bridge.clearance - state.vehicleHeight;
+                els.clearanceValue.textContent = `${clearance.toFixed(1)}'`;
+                els.clearanceValue.className = `text-xl font-bold font-mono ${clearance < 0 ? 'text-red-500' : 'text-emerald-500'}`;
+                els.youHighlight.style.display = clearance < 0 ? 'block' : 'none';
                 
             } else {
-                panel.style.display = 'none';
+                els.alertPanel.style.display = 'none';
             }
         }
 
         function checkAlerts() {
-            if (!currentPosition) return;
-            const { latitude, longitude } = currentPosition;
+            if (!state.currentPosition || state.inTestMode) return;
+            
+            const { latitude, longitude } = state.currentPosition;
             let closestBridge = null;
             let closestDistance = Infinity;
 
-            for (const bridge of bridges) {
+            for (const bridge of BRIDGES) {
                 if (bridge.type !== 'underpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
-                const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
-                if (distance < closestDistance && distance <= 2.0) {
-                    const speedMph = (currentPosition.speed || 0) * 2.23694;
-                    const isMoving = speedMph >= 5;
-                    const hasHeading = headingHistory.length >= 3;
-                    const hasTrajectory = positionHistory.length >= 3;
+                if (distance < closestDistance && distance <= CONFIG.MAX_ALERT_DISTANCE) {
+                    const speedMph = (state.currentPosition.speed || 0) * 2.23694;
+                    const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
                     
-                    if (isMoving && hasHeading && hasTrajectory) {
+                    if (isMoving && state.headingHistory.length >= 3 && state.positionHistory.length >= 3) {
+                        const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                         closestDistance = distance;
-                        closestBridge = {
-                            bridge,
-                            distance,
-                            bearing: Math.round(bearing)
-                        };
+                        closestBridge = { bridge, distance, bearing: Math.round(bearing) };
                     }
                 }
             }
 
-            nearestBridge = closestBridge;
+            state.nearestBridge = closestBridge;
             updateCompass();
             updateAlertPanel();
         }
@@ -393,14 +410,14 @@
             if (e.webkitCompassHeading !== undefined) h = e.webkitCompassHeading;
             else if (e.alpha !== null) h = (360 - e.alpha) % 360;
             if (h !== null) {
-                deviceHeading = h;
+                state.deviceHeading = h;
                 updateCompass();
             }
         }
 
         function onPositionUpdate(pos) {
-            previousPosition = currentPosition;
-            currentPosition = {
+            state.previousPosition = state.currentPosition;
+            state.currentPosition = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude,
                 accuracy: pos.coords.accuracy,
@@ -408,42 +425,49 @@
                 timestamp: Date.now()
             };
 
-            positionHistory.push({ lat: currentPosition.latitude, lon: currentPosition.longitude, timestamp: currentPosition.timestamp });
-            if (positionHistory.length > POSITION_HISTORY_SIZE) positionHistory.shift();
+            state.positionHistory.push({ 
+                lat: state.currentPosition.latitude, 
+                lon: state.currentPosition.longitude, 
+                timestamp: state.currentPosition.timestamp 
+            });
+            if (state.positionHistory.length > CONFIG.POSITION_HISTORY_SIZE) state.positionHistory.shift();
 
             let newHeading = null;
             const speedMph = (pos.coords.speed || 0) * 2.23694;
             
-            if (pos.coords.heading !== null && pos.coords.heading !== undefined && speedMph >= 5) {
+            if (pos.coords.heading !== null && pos.coords.heading !== undefined && speedMph >= CONFIG.MIN_SPEED_MPH) {
                 newHeading = pos.coords.heading;
-            } else if (previousPosition && speedMph >= 5) {
-                newHeading = calculateBearing(previousPosition.latitude, previousPosition.longitude, currentPosition.latitude, currentPosition.longitude);
+            } else if (state.previousPosition && speedMph >= CONFIG.MIN_SPEED_MPH) {
+                newHeading = calculateBearing(
+                    state.previousPosition.latitude, 
+                    state.previousPosition.longitude, 
+                    state.currentPosition.latitude, 
+                    state.currentPosition.longitude
+                );
             }
 
             if (newHeading !== null) {
-                headingHistory.push(newHeading);
-                if (headingHistory.length > HEADING_HISTORY_SIZE) headingHistory.shift();
-                currentHeading = getSmoothedHeading();
+                state.headingHistory.push(newHeading);
+                if (state.headingHistory.length > CONFIG.HEADING_HISTORY_SIZE) state.headingHistory.shift();
+                state.currentHeading = getSmoothedHeading();
             }
 
-            document.getElementById('latValue').textContent = currentPosition.latitude.toFixed(6);
-            document.getElementById('lonValue').textContent = currentPosition.longitude.toFixed(6);
+            els.latValue.textContent = state.currentPosition.latitude.toFixed(6);
+            els.lonValue.textContent = state.currentPosition.longitude.toFixed(6);
 
             const now = Date.now();
-            if (now - lastCheckTime >= CHECK_THROTTLE) {
+            if (now - state.lastCheckTime >= CONFIG.CHECK_THROTTLE) {
                 checkAlerts();
-                lastCheckTime = now;
+                state.lastCheckTime = now;
             }
             
             updateCompass();
         }
 
         function startMonitoring() {
-            if (!navigator.geolocation) {
-                alert('GPS not available');
-                return;
-            }
-            watchId = navigator.geolocation.watchPosition(
+            if (!navigator.geolocation || state.inTestMode) return;
+            
+            state.watchId = navigator.geolocation.watchPosition(
                 onPositionUpdate, 
                 e => console.error('GPS Error:', e), 
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
@@ -453,53 +477,39 @@
                 window.addEventListener('deviceorientation', onDeviceOrientation);
             }
             
-            isMonitoring = true;
+            state.isMonitoring = true;
         }
 
         function openEditModal() {
-            document.getElementById('editModal').classList.remove('hidden');
-            document.getElementById('editModal').classList.add('flex');
-            document.getElementById('heightInput').value = vehicleHeight;
+            els.editModal.classList.remove('hidden');
+            els.editModal.classList.add('flex');
+            els.heightInput.value = state.vehicleHeight;
         }
 
         function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-            document.getElementById('editModal').classList.remove('flex');
+            els.editModal.classList.add('hidden');
+            els.editModal.classList.remove('flex');
         }
 
         function saveHeight() {
-            const input = document.getElementById('heightInput');
-            vehicleHeight = parseFloat(input.value);
-            document.getElementById('vehicleHeight').textContent = `${vehicleHeight.toFixed(1)} ft`;
-            document.getElementById('youHeight').textContent = `${vehicleHeight.toFixed(1)}'`;
+            state.vehicleHeight = parseFloat(els.heightInput.value);
+            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
+            els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
             updateAlertPanel();
             closeEditModal();
         }
 
-        // Start monitoring on load
-        window.addEventListener('load', () => startMonitoring());
-
-        // Test mode
-        let testMode = false;
-        let testInterval = null;
-        let testScenario = 0; // Cycle through scenarios
-
         function toggleTestMode() {
-            if (!testMode) {
-                // Start test mode
-                testMode = true;
-                testScenario = 0;
-                const btn = document.getElementById('testBtn');
-                btn.textContent = 'Next';
-                btn.classList.add('bg-primary', 'text-background', 'border-primary');
-                btn.classList.remove('border-white/20', 'hover:bg-white/5');
-                
+            if (!state.inTestMode) {
+                state.inTestMode = true;
+                state.testScenario = 0;
+                els.testBtn.textContent = 'Next';
+                els.testBtn.classList.add('bg-primary', 'text-background', 'border-primary');
+                els.testBtn.classList.remove('border-white/20', 'hover:bg-white/5');
                 runTestScenario();
             } else {
-                // Cycle to next scenario
-                testScenario++;
-                if (testScenario > 2) {
-                    // Exit test mode
+                state.testScenario++;
+                if (state.testScenario > 2) {
                     exitTestMode();
                 } else {
                     runTestScenario();
@@ -508,94 +518,77 @@
         }
 
         function runTestScenario() {
-            // Clear any existing interval
-            if (testInterval) {
-                clearInterval(testInterval);
-                testInterval = null;
-            }
-            
-            // Base setup for all scenarios
-            currentHeading = 0;
-            headingHistory = [0, 0, 0, 0, 0];
-            positionHistory = [
+            state.currentHeading = 45;
+            state.headingHistory = Array(5).fill(45);
+            state.positionHistory = [
                 { lat: 34.17046697384523 - 0.006, lon: -118.50114573681475, timestamp: Date.now() - 2000 },
                 { lat: 34.17046697384523 - 0.0055, lon: -118.50114573681475, timestamp: Date.now() - 1000 },
                 { lat: 34.17046697384523 - 0.005, lon: -118.50114573681475, timestamp: Date.now() }
             ];
             
-            if (testScenario === 0) {
-                // SCENARIO 1: CRITICAL - Very close (0.3 miles), too tall
-                vehicleHeight = 15.0;
-                currentPosition = {
-                    latitude: 34.17046697384523 - 0.005,
-                    longitude: -118.50114573681475,
-                    speed: 13.41,
-                    timestamp: Date.now()
-                };
-                
-            } else if (testScenario === 1) {
-                // SCENARIO 2: WARNING - Medium distance (1.2 miles), too tall
-                vehicleHeight = 14.5;
-                currentPosition = {
-                    latitude: 34.17046697384523 - 0.018,
-                    longitude: -118.50114573681475,
-                    speed: 13.41,
-                    timestamp: Date.now()
-                };
-                
-            } else if (testScenario === 2) {
-                // SCENARIO 3: SAFE - Far away (1.8 miles), fits under
-                vehicleHeight = 13.0;
-                currentPosition = {
-                    latitude: 34.17046697384523 - 0.026,
-                    longitude: -118.50114573681475,
-                    speed: 13.41,
-                    timestamp: Date.now()
-                };
-            }
+            const scenarios = [
+                { height: 15.0, latOffset: -0.005, distance: 0.3 },  // CRITICAL
+                { height: 14.5, latOffset: -0.012, distance: 0.8 },  // WARNING
+                { height: 14.0, latOffset: -0.022, distance: 1.5 }   // CAUTION
+            ];
             
-            // Update displays
-            document.getElementById('vehicleHeight').textContent = `${vehicleHeight.toFixed(1)} ft`;
-            document.getElementById('youHeight').textContent = `${vehicleHeight.toFixed(1)}'`;
-            document.getElementById('latValue').textContent = currentPosition.latitude.toFixed(6);
-            document.getElementById('lonValue').textContent = currentPosition.longitude.toFixed(6);
+            const scenario = scenarios[state.testScenario];
+            state.vehicleHeight = scenario.height;
+            state.currentPosition = {
+                latitude: BRIDGES[0].lat + scenario.latOffset,
+                longitude: BRIDGES[0].lon,
+                speed: 13.41,
+                timestamp: Date.now()
+            };
             
-            // Trigger detection
-            checkAlerts();
-        }
-
-        function exitTestMode() {
-            testMode = false;
-            testScenario = 0;
+            state.nearestBridge = {
+                bridge: BRIDGES[0],
+                distance: scenario.distance,
+                bearing: 45
+            };
             
-            const btn = document.getElementById('testBtn');
-            btn.textContent = 'Test';
-            btn.classList.remove('bg-primary', 'text-background', 'border-primary');
-            btn.classList.add('border-white/20', 'hover:bg-white/5');
-            
-            if (testInterval) {
-                clearInterval(testInterval);
-                testInterval = null;
-            }
-            
-            // Reset everything
-            vehicleHeight = 15.0;
-            nearestBridge = null;
-            currentPosition = null;
-            currentHeading = null;
-            headingHistory = [];
-            positionHistory = [];
-            
-            document.getElementById('vehicleHeight').textContent = `${vehicleHeight.toFixed(1)} ft`;
-            document.getElementById('latValue').textContent = '---.------';
-            document.getElementById('lonValue').textContent = '---.------';
-            document.getElementById('bearingValue').textContent = '--';
-            document.getElementById('bearingDir').textContent = '--';
-            document.getElementById('distanceValue').textContent = '--';
+            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
+            els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
+            els.latValue.textContent = state.currentPosition.latitude.toFixed(6);
+            els.lonValue.textContent = state.currentPosition.longitude.toFixed(6);
             
             updateCompass();
             updateAlertPanel();
         }
+
+        function exitTestMode() {
+            state.inTestMode = false;
+            state.testScenario = 0;
+            
+            els.testBtn.textContent = 'Test';
+            els.testBtn.classList.remove('bg-primary', 'text-background', 'border-primary');
+            els.testBtn.classList.add('border-white/20', 'hover:bg-white/5');
+            
+            state.vehicleHeight = 15.0;
+            state.nearestBridge = null;
+            state.currentPosition = null;
+            state.currentHeading = null;
+            state.headingHistory = [];
+            state.positionHistory = [];
+            
+            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
+            els.latValue.textContent = '---.------';
+            els.lonValue.textContent = '---.------';
+            els.bearingValue.textContent = '--';
+            els.bearingDir.textContent = '--';
+            els.distanceValue.textContent = '--';
+            
+            updateCompass();
+            updateAlertPanel();
+            startMonitoring();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initElements();
+            initCompass();
+            if (!state.inTestMode) startMonitoring();
+        });
     </script>
 </body>
 </html>
