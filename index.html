@@ -44,7 +44,6 @@
             font-family: 'Inter', system-ui, sans-serif;
             color: hsl(210, 40%, 98%);
             -webkit-font-smoothing: antialiased;
-            padding-top: env(safe-area-inset-top);
         }
         .compass-tick {
             position: absolute;
@@ -55,7 +54,7 @@
     </style>
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
-    <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between" style="padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: 12px;">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <svg class="w-6 h-6 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +65,7 @@
                 <h1 class="font-display font-bold text-lg leading-none">Road Warrior</h1>
                 <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v4.6</span>
+                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v4.7</span>
                 </div>
             </div>
         </div>
