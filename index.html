@@ -70,8 +70,6 @@
             background: hsl(222, 47%, 11%);
             color: hsl(210, 40%, 98%);
             -webkit-font-smoothing: antialiased;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
         }
         .compass-tick {
             position: absolute;
@@ -83,7 +81,7 @@
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 flex items-center justify-between" style="padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: 12px;">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-white/10 flex items-center justify-center shadow-lg overflow-hidden">
                 <img id="headerLogo" alt="Road Warrior Logo" class="w-full h-full object-cover" />
