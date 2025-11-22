@@ -70,9 +70,8 @@
             background: hsl(222, 47%, 11%);
             color: hsl(210, 40%, 98%);
             -webkit-font-smoothing: antialiased;
-        }
-        header {
-            padding-top: max(12px, env(safe-area-inset-top));
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         .compass-tick {
             position: absolute;
@@ -100,7 +99,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="px-3 max-w-sm mx-auto space-y-4 pb-8" style="padding-top: max(80px, calc(env(safe-area-inset-top) + 80px))">
+    <main class="pt-20 px-3 max-w-sm mx-auto space-y-4 pb-8">
         
         <!-- Vehicle Height Card -->
         <div class="bg-card/50 border border-white/5 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
