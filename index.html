@@ -1,15 +1,47 @@
-<!DOCTYPE html>
+<script>
+        // Hardcoded logo as PNG data URI (180x180 shield icon)
+        const APP_ICON = "data:image/png;base64,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<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Road Warrior - Bridge Alert</title>
+    <script>
+        // Set icon dynamically from hardcoded data with cache busting
+        const iconData = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%234f9bff;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%232563eb;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='200' height='200' rx='40' fill='url(%23grad)'/%3E%3Cpath d='M100 30 C120 35 140 40 160 45 L160 100 C160 130 140 155 100 170 C60 155 40 130 40 100 L40 45 C60 40 80 35 100 30 Z' fill='white'/%3E%3Cpath d='M100 50 C115 54 130 58 145 62 L145 100 C145 122 130 140 100 152 C70 140 55 122 55 100 L55 62 C70 58 85 54 100 50 Z' fill='url(%23grad)'/%3E%3C/svg%3E";
+        
+        // Create favicon
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/svg+xml';
+        favicon.href = iconData;
+        document.head.appendChild(favicon);
+        
+        // Create apple touch icons with explicit type and cache buster
+        const timestamp = Date.now();
+        [180, 167, 152, 120, ''].forEach(size => {
+            const link = document.createElement('link');
+            link.rel = 'apple-touch-icon';
+            if (size) link.sizes = `${size}x${size}`;
+            link.href = iconData + '?v=' + timestamp;
+            document.head.appendChild(link);
+        });
+        
+        // Also add precomposed for older iOS
+        const precomposed = document.createElement('link');
+        precomposed.rel = 'apple-touch-icon-precomposed';
+        precomposed.href = iconData + '?v=' + timestamp;
+        document.head.appendChild(precomposed);
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Hardcoded logo as data URI - Simple Shield
+        const APP_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%234f9bff;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%232563eb;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='200' height='200' rx='40' fill='url(%23grad)'/%3E%3Cpath d='M100 30 C120 35 140 40 160 45 L160 100 C160 130 140 155 100 170 C60 155 40 130 40 100 L40 45 C60 40 80 35 100 30 Z' fill='white'/%3E%3Cpath d='M100 50 C115 54 130 58 145 62 L145 100 C145 122 130 140 100 152 C70 140 55 122 55 100 L55 62 C70 58 85 54 100 50 Z' fill='url(%23grad)'/%3E%3C/svg%3E";
+        
         tailwind.config = {
             theme: {
                 extend: {
@@ -49,9 +81,9 @@
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
             </div>
@@ -166,7 +198,7 @@
                 <div class="bg-background/20 rounded-lg p-2 text-center relative overflow-hidden">
                     <div class="absolute inset-0 bg-red-500/20 animate-pulse" id="youHighlight" style="display: none;"></div>
                     <div class="text-[10px] uppercase opacity-70 mb-1 relative z-10">You</div>
-                    <div class="text-xl font-bold font-mono relative z-10 text-primary" id="youHeight">15.0'</div>
+                    <div class="text-xl font-bold font-mono relative z-10 text-primary" id="youHeight">15'</div>
                 </div>
                 <div class="bg-background/20 rounded-lg p-2 text-center">
                     <div class="text-[10px] uppercase opacity-70 mb-1">Clearance</div>
@@ -191,7 +223,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-sm text-muted-foreground mb-2 block">Height (feet)</label>
-                    <input type="number" id="heightInput" step="0.5" min="10" max="16" value="15.0" class="w-full bg-muted border border-white/10 rounded-lg px-4 py-2 text-lg font-mono focus:outline-none focus:border-primary">
+                    <input type="number" id="heightInput" step="0.5" min="10" max="16" value="15" class="w-full bg-muted border border-white/10 rounded-lg px-4 py-2 text-lg font-mono focus:outline-none focus:border-primary">
                 </div>
                 <div class="flex gap-3">
                     <button onclick="closeEditModal()" class="flex-1 h-10 bg-muted hover:bg-muted/80 rounded-lg font-semibold transition-colors">
@@ -208,7 +240,7 @@
     <script>
         // State
         const state = {
-            vehicleHeight: 15.0,
+            vehicleHeight: 15,
             watchId: null,
             isMonitoring: false,
             currentPosition: null,
@@ -228,7 +260,10 @@
             POSITION_HISTORY_SIZE: 5,
             CHECK_THROTTLE: 2000,
             MIN_SPEED_MPH: 5,
-            MAX_ALERT_DISTANCE: 2.0
+            MAX_ALERT_DISTANCE: 2.0,
+            MIN_HEADING_SAMPLES: 3,      // Minimum for basic heading confidence
+            MIN_HEADING_SAMPLES_SLOW: 5,  // More samples needed when slow/stopped
+            APPROACH_ANGLE: 90            // Degrees - wider angle = less strict
         };
 
         // Bridge database
@@ -351,7 +386,7 @@
         }
 
         function updateAlertPanel() {
-            if (state.nearestBridge && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
+            if (state.nearestBridge && !state.nearestBridge.hideAlert && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
                 els.alertPanel.style.display = 'block';
                 
                 const config = getSeverityConfig(state.nearestBridge.distance);
@@ -380,6 +415,9 @@
             if (!state.currentPosition || state.inTestMode) return;
             
             const { latitude, longitude } = state.currentPosition;
+            const speedMph = (state.currentPosition.speed || 0) * 2.23694;
+            const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
+            
             let closestBridge = null;
             let closestDistance = Infinity;
 
@@ -387,20 +425,72 @@
                 if (bridge.type !== 'underpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
+                const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
+                // Always show closest bridge on compass within range
                 if (distance < closestDistance && distance <= CONFIG.MAX_ALERT_DISTANCE) {
-                    const speedMph = (state.currentPosition.speed || 0) * 2.23694;
-                    const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
-                    
-                    if (isMoving && state.headingHistory.length >= 3 && state.positionHistory.length >= 3) {
-                        const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
-                        closestDistance = distance;
-                        closestBridge = { bridge, distance, bearing: Math.round(bearing) };
-                    }
+                    closestDistance = distance;
+                    closestBridge = { bridge, distance, bearing: Math.round(bearing) };
                 }
             }
 
+            // Store bridge for compass display (always show if detected)
             state.nearestBridge = closestBridge;
+            
+            // Determine if we should show the alert
+            if (closestBridge) {
+                let shouldHideAlert = false;
+                
+                // We have heading data available (from GPS or device orientation)
+                const hasHeading = state.currentHeading !== null || state.deviceHeading !== null;
+                const effectiveHeading = state.currentHeading || state.deviceHeading || 0;
+                
+                // Progressive confidence based on data quality
+                const headingSampleCount = state.headingHistory.length;
+                const positionSampleCount = state.positionHistory.length;
+                
+                // Scenario 1: Moving with good GPS heading - LEAST STRICT
+                if (isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES) {
+                    // Check direction
+                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
+                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                        shouldHideAlert = true; // Driving away
+                    }
+                }
+                // Scenario 2: Slow/stopped but have device orientation - MODERATE
+                else if (!isMoving && state.deviceHeading !== null) {
+                    // Use device orientation, but need at least some position history
+                    if (positionSampleCount < 2) {
+                        shouldHideAlert = true; // Just started, wait for more data
+                    } else {
+                        const bearingDiff = Math.abs((closestBridge.bearing - state.deviceHeading + 540) % 360 - 180);
+                        if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                            shouldHideAlert = true; // Not facing bridge
+                        }
+                    }
+                }
+                // Scenario 3: Slow/stopped with calculated heading - MORE STRICT
+                else if (!isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
+                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
+                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                        shouldHideAlert = true;
+                    }
+                }
+                // Scenario 4: Not enough data yet - HIDE ALERT
+                else {
+                    shouldHideAlert = true; // Need more samples
+                }
+                
+                // Very close? Override and show alert if too tall (emergency case)
+                if (closestBridge.distance <= 0.3 && state.vehicleHeight > closestBridge.bridge.clearance) {
+                    shouldHideAlert = false; // Always warn if critical distance
+                }
+                
+                if (shouldHideAlert) {
+                    state.nearestBridge = { ...closestBridge, hideAlert: true };
+                }
+            }
+            
             updateCompass();
             updateAlertPanel();
         }
