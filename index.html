@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Road Warrior - Bridge Alert</title>
     <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/app-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/app-icon.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/app-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/app-icon.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/app-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -38,6 +44,8 @@
             background: hsl(222, 47%, 11%);
             color: hsl(210, 40%, 98%);
             -webkit-font-smoothing: antialiased;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         .compass-tick {
             position: absolute;
@@ -50,11 +58,9 @@
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-white/10 flex items-center justify-center shadow-lg overflow-hidden">
+                <img src="/app-icon.png" alt="Road Warrior Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'w-6 h-6 text-primary\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z\' /></svg>';" />
             </div>
             <div>
                 <h1 class="font-display font-bold text-lg leading-none">Road Warrior</h1>
@@ -229,7 +235,10 @@
             POSITION_HISTORY_SIZE: 5,
             CHECK_THROTTLE: 2000,
             MIN_SPEED_MPH: 5,
-            MAX_ALERT_DISTANCE: 2.0
+            MAX_ALERT_DISTANCE: 2.0,
+            MIN_HEADING_SAMPLES: 3,      // Minimum for basic heading confidence
+            MIN_HEADING_SAMPLES_SLOW: 5,  // More samples needed when slow/stopped
+            APPROACH_ANGLE: 90            // Degrees - wider angle = less strict
         };
 
         // Bridge database
@@ -352,7 +361,7 @@
         }
 
         function updateAlertPanel() {
-            if (state.nearestBridge && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
+            if (state.nearestBridge && !state.nearestBridge.hideAlert && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
                 els.alertPanel.style.display = 'block';
                 
                 const config = getSeverityConfig(state.nearestBridge.distance);
@@ -381,6 +390,9 @@
             if (!state.currentPosition || state.inTestMode) return;
             
             const { latitude, longitude } = state.currentPosition;
+            const speedMph = (state.currentPosition.speed || 0) * 2.23694;
+            const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
+            
             let closestBridge = null;
             let closestDistance = Infinity;
 
@@ -388,20 +400,72 @@
                 if (bridge.type !== 'underpass') continue;
                 
                 const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
+                const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
                 
+                // Always show closest bridge on compass within range
                 if (distance < closestDistance && distance <= CONFIG.MAX_ALERT_DISTANCE) {
-                    const speedMph = (state.currentPosition.speed || 0) * 2.23694;
-                    const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
-                    
-                    if (isMoving && state.headingHistory.length >= 3 && state.positionHistory.length >= 3) {
-                        const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
-                        closestDistance = distance;
-                        closestBridge = { bridge, distance, bearing: Math.round(bearing) };
-                    }
+                    closestDistance = distance;
+                    closestBridge = { bridge, distance, bearing: Math.round(bearing) };
                 }
             }
 
+            // Store bridge for compass display (always show if detected)
             state.nearestBridge = closestBridge;
+            
+            // Determine if we should show the alert
+            if (closestBridge) {
+                let shouldHideAlert = false;
+                
+                // We have heading data available (from GPS or device orientation)
+                const hasHeading = state.currentHeading !== null || state.deviceHeading !== null;
+                const effectiveHeading = state.currentHeading || state.deviceHeading || 0;
+                
+                // Progressive confidence based on data quality
+                const headingSampleCount = state.headingHistory.length;
+                const positionSampleCount = state.positionHistory.length;
+                
+                // Scenario 1: Moving with good GPS heading - LEAST STRICT
+                if (isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES) {
+                    // Check direction
+                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
+                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                        shouldHideAlert = true; // Driving away
+                    }
+                }
+                // Scenario 2: Slow/stopped but have device orientation - MODERATE
+                else if (!isMoving && state.deviceHeading !== null) {
+                    // Use device orientation, but need at least some position history
+                    if (positionSampleCount < 2) {
+                        shouldHideAlert = true; // Just started, wait for more data
+                    } else {
+                        const bearingDiff = Math.abs((closestBridge.bearing - state.deviceHeading + 540) % 360 - 180);
+                        if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                            shouldHideAlert = true; // Not facing bridge
+                        }
+                    }
+                }
+                // Scenario 3: Slow/stopped with calculated heading - MORE STRICT
+                else if (!isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
+                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
+                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
+                        shouldHideAlert = true;
+                    }
+                }
+                // Scenario 4: Not enough data yet - HIDE ALERT
+                else {
+                    shouldHideAlert = true; // Need more samples
+                }
+                
+                // Very close? Override and show alert if too tall (emergency case)
+                if (closestBridge.distance <= 0.3 && state.vehicleHeight > closestBridge.bridge.clearance) {
+                    shouldHideAlert = false; // Always warn if critical distance
+                }
+                
+                if (shouldHideAlert) {
+                    state.nearestBridge = { ...closestBridge, hideAlert: true };
+                }
+            }
+            
             updateCompass();
             updateAlertPanel();
         }
