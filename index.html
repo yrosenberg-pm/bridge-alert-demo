@@ -34,23 +34,9 @@
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            background: hsl(222, 47%, 11%);
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
-        body { 
-            font-family: 'Inter', system-ui, sans-serif;
-            color: hsl(210, 40%, 98%);
-            -webkit-font-smoothing: antialiased;
-        }
-        .compass-tick {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
+        html, body { background: hsl(222, 47%, 11%); margin: 0; padding: 0; height: 100%; }
+        body { font-family: 'Inter', system-ui, sans-serif; color: hsl(210, 40%, 98%); -webkit-font-smoothing: antialiased; }
+        .compass-tick { position: absolute; width: 100%; height: 100%; pointer-events: none; }
     </style>
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -72,6 +58,7 @@
     </header>
 
     <main class="px-3 max-w-sm mx-auto space-y-4 pb-8" style="padding-top: max(80px, calc(env(safe-area-inset-top) + 80px));">
+        <!-- Vehicle Height Card -->
         <div class="bg-card/50 border border-white/5 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="p-2 bg-primary/10 rounded-md text-primary">
@@ -85,9 +72,10 @@
                     <div class="text-lg font-mono font-bold" id="vehicleHeight">15 ft</div>
                 </div>
             </div>
-            <button class="h-7 px-3 text-xs font-semibold border border-white/10 hover:bg-white/5 rounded-lg transition-colors" onclick="openEditModal()">Edit</button>
+            <button class="h-7 px-3 text-xs font-semibold border border-white/10 hover:bg-white/5 rounded-lg transition-colors" onclick="UI.openEditModal()">Edit</button>
         </div>
 
+        <!-- Compass Section -->
         <div class="relative py-4">
             <div class="absolute top-0 right-0 text-right">
                 <div class="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Bearing</div>
@@ -133,6 +121,7 @@
             </div>
         </div>
 
+        <!-- Alert Panel -->
         <div id="alertPanel" class="rounded-xl border border-primary/30 bg-blue-500/10 p-4 backdrop-blur-md transition-all duration-500" style="display: none;">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-2">
@@ -148,7 +137,6 @@
                 </div>
                 <button class="px-3 py-1 text-[10px] font-semibold border border-white/10 hover:bg-white/5 rounded-full transition-colors" id="severityBadge">INFO</button>
             </div>
-
             <div class="grid grid-cols-3 gap-2 mt-4">
                 <div class="bg-background/20 rounded-lg p-2 text-center">
                     <div class="text-[10px] uppercase opacity-70 mb-1">Bridge</div>
@@ -167,10 +155,11 @@
         </div>
 
         <div class="flex justify-end">
-            <button onclick="toggleTestMode()" id="testBtn" class="h-7 px-3 text-xs font-semibold border border-white/20 hover:bg-white/5 rounded-lg transition-colors">Test</button>
+            <button onclick="Test.toggle()" id="testBtn" class="h-7 px-3 text-xs font-semibold border border-white/20 hover:bg-white/5 rounded-lg transition-colors">Test</button>
         </div>
     </main>
 
+    <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <div class="bg-card border border-white/10 rounded-2xl p-6 max-w-sm w-full">
             <h2 class="text-xl font-display font-bold mb-4">Vehicle Settings</h2>
@@ -180,437 +169,578 @@
                     <input type="number" id="heightInput" step="0.5" min="10" max="16" value="15" class="w-full bg-muted border border-white/10 rounded-lg px-4 py-2 text-lg font-mono focus:outline-none focus:border-primary">
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="closeEditModal()" class="flex-1 h-10 bg-muted hover:bg-muted/80 rounded-lg font-semibold transition-colors">Cancel</button>
-                    <button onclick="saveHeight()" class="flex-1 h-10 bg-primary text-background hover:bg-primary/90 rounded-lg font-semibold transition-colors">Save</button>
+                    <button onclick="UI.closeEditModal()" class="flex-1 h-10 bg-muted hover:bg-muted/80 rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button onclick="UI.saveHeight()" class="flex-1 h-10 bg-primary text-background hover:bg-primary/90 rounded-lg font-semibold transition-colors">Save</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const state = {
-            vehicleHeight: 15,
-            watchId: null,
-            isMonitoring: false,
-            currentPosition: null,
-            currentHeading: null,
-            previousPosition: null,
-            headingHistory: [],
-            positionHistory: [],
-            deviceHeading: null,
-            nearestBridge: null,
-            inTestMode: false,
-            testScenario: 0,
-            lastCheckTime: 0
-        };
-        
-        const CONFIG = {
-            HEADING_HISTORY_SIZE: 15,
-            POSITION_HISTORY_SIZE: 5,
-            CHECK_THROTTLE: 2000,
-            MIN_SPEED_MPH: 5,
-            MAX_ALERT_DISTANCE: 2.0,
-            MIN_HEADING_SAMPLES: 3,
-            MIN_HEADING_SAMPLES_SLOW: 5,
-            APPROACH_ANGLE: 90
-        };
+    /* ═══════════════════════════════════════════════════════════════════════════
+       ROAD WARRIOR v4.8 - Bridge Clearance Alert System
+       Optimized for maintainability and future development
+       ═══════════════════════════════════════════════════════════════════════════ */
 
-        const BRIDGES = [
-            { id: 'EN-101-BALBOA', name: 'Balboa Blvd over 101 Fwy', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.5, type: 'underpass' },
-            { id: 'SO-405-BURBANK', name: 'Burbank Blvd over 405 Fwy', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, type: 'underpass' },
-            { id: 'SC-101-COLDWATER', name: 'Coldwater Canyon over 101 Fwy', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, type: 'underpass' }
-        ];
-
-        const els = {};
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CONFIGURATION - Tune these values based on field testing
+    // ─────────────────────────────────────────────────────────────────────────────
+    const CONFIG = {
+        // Heading stabilization
+        HEADING_HISTORY_SIZE: 15,      // Samples for heading smoothing
+        POSITION_HISTORY_SIZE: 5,      // Samples for position tracking
         
-        function initElements() {
-            const ids = ['compassTicks', 'cardinalPoints', 'compassNeedle', 'bearingValue', 'bearingDir', 
-                         'distanceValue', 'latValue', 'lonValue', 'alertPanel', 'alertTitle', 'bridgeName', 
-                         'bridgeHeight', 'youHeight', 'clearanceValue', 'youHighlight', 'vehicleHeight', 
-                         'severityBadge', 'editModal', 'heightInput', 'testBtn'];
-            ids.forEach(id => els[id] = document.getElementById(id));
+        // Alert timing
+        CHECK_THROTTLE: 2000,          // ms between bridge checks
+        
+        // Movement detection
+        MIN_SPEED_MPH: 5,              // Below this = stationary
+        
+        // Alert thresholds
+        MAX_ALERT_DISTANCE: 2.0,       // Max miles to show bridge in compass
+        CRITICAL_DISTANCE: 0.3,        // Force alert regardless of heading
+        
+        // Heading validation
+        MIN_HEADING_SAMPLES: 3,        // Samples needed while moving
+        MIN_HEADING_SAMPLES_SLOW: 5,   // Samples needed while stationary
+        APPROACH_ANGLE: 90,            // Max degrees off-bearing to alert
+        
+        // Severity thresholds (miles)
+        SEVERITY: {
+            CRITICAL: 0.5,
+            WARNING: 1.0
         }
+    };
 
-        function initCompass() {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // BRIDGE DATABASE - Add new bridges here
+    // Format: { id, name, lat, lon, clearance (ft), type }
+    // ─────────────────────────────────────────────────────────────────────────────
+    const BRIDGES = [
+        { id: 'EN-101-BALBOA', name: 'Balboa Blvd over 101 Fwy', lat: 34.17046697384523, lon: -118.50114573681475, clearance: 13.5, type: 'underpass' },
+        { id: 'SO-405-BURBANK', name: 'Burbank Blvd over 405 Fwy', lat: 34.172153559602314, lon: -118.46768567630716, clearance: 13.0, type: 'underpass' },
+        { id: 'SC-101-COLDWATER', name: 'Coldwater Canyon over 101 Fwy', lat: 34.15674619828743, lon: -118.41376835430795, clearance: 13.0, type: 'underpass' }
+    ];
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // APPLICATION STATE
+    // ─────────────────────────────────────────────────────────────────────────────
+    const State = {
+        vehicleHeight: 15,
+        watchId: null,
+        isMonitoring: false,
+        currentPosition: null,
+        previousPosition: null,
+        currentHeading: null,
+        deviceHeading: null,
+        nearestBridge: null,
+        headingHistory: [],
+        positionHistory: [],
+        lastCheckTime: 0,
+        inTestMode: false,
+        testScenario: 0
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DOM ELEMENT CACHE
+    // ─────────────────────────────────────────────────────────────────────────────
+    const DOM = {};
+    const DOM_IDS = [
+        'compassTicks', 'cardinalPoints', 'compassNeedle', 'bearingValue', 'bearingDir',
+        'distanceValue', 'latValue', 'lonValue', 'alertPanel', 'alertTitle', 'bridgeName',
+        'bridgeHeight', 'youHeight', 'clearanceValue', 'youHighlight', 'vehicleHeight',
+        'severityBadge', 'editModal', 'heightInput', 'testBtn'
+    ];
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // GEO UTILITIES
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Geo = {
+        EARTH_RADIUS_MI: 3959,
+        DEG_TO_RAD: Math.PI / 180,
+        RAD_TO_DEG: 180 / Math.PI,
+        
+        /** Calculate distance between two points in miles */
+        distance(lat1, lon1, lat2, lon2) {
+            const dLat = (lat2 - lat1) * this.DEG_TO_RAD;
+            const dLon = (lon2 - lon1) * this.DEG_TO_RAD;
+            const a = Math.sin(dLat/2) ** 2 + 
+                     Math.cos(lat1 * this.DEG_TO_RAD) * Math.cos(lat2 * this.DEG_TO_RAD) * 
+                     Math.sin(dLon/2) ** 2;
+            return this.EARTH_RADIUS_MI * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        },
+        
+        /** Calculate bearing from point 1 to point 2 in degrees */
+        bearing(lat1, lon1, lat2, lon2) {
+            const dLon = (lon2 - lon1) * this.DEG_TO_RAD;
+            const y = Math.sin(dLon) * Math.cos(lat2 * this.DEG_TO_RAD);
+            const x = Math.cos(lat1 * this.DEG_TO_RAD) * Math.sin(lat2 * this.DEG_TO_RAD) - 
+                     Math.sin(lat1 * this.DEG_TO_RAD) * Math.cos(lat2 * this.DEG_TO_RAD) * Math.cos(dLon);
+            return (Math.atan2(y, x) * this.RAD_TO_DEG + 360) % 360;
+        },
+        
+        /** Get cardinal direction from bearing */
+        cardinalDir(bearing) {
+            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return dirs[Math.round(((bearing % 360) / 45)) % 8];
+        },
+        
+        /** Calculate angular difference between two bearings */
+        bearingDiff(b1, b2) {
+            return Math.abs((b1 - b2 + 540) % 360 - 180);
+        },
+        
+        /** Convert m/s to mph */
+        msToMph(ms) {
+            return (ms || 0) * 2.23694;
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // HEADING PROCESSOR
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Heading = {
+        /** Add a heading sample and maintain history size */
+        addSample(heading) {
+            State.headingHistory.push(heading);
+            if (State.headingHistory.length > CONFIG.HEADING_HISTORY_SIZE) {
+                State.headingHistory.shift();
+            }
+            State.currentHeading = this.getSmoothed();
+        },
+        
+        /** Get exponentially weighted smoothed heading */
+        getSmoothed() {
+            if (!State.headingHistory.length) return null;
+            let sumX = 0, sumY = 0, totalWeight = 0;
+            
+            for (let i = 0; i < State.headingHistory.length; i++) {
+                const weight = Math.pow(2, i);
+                const rad = State.headingHistory[i] * Geo.DEG_TO_RAD;
+                sumX += Math.cos(rad) * weight;
+                sumY += Math.sin(rad) * weight;
+                totalWeight += weight;
+            }
+            return (Math.atan2(sumY / totalWeight, sumX / totalWeight) * Geo.RAD_TO_DEG + 360) % 360;
+        },
+        
+        /** Get effective heading (prefer device compass when stationary) */
+        getEffective() {
+            return State.currentHeading ?? State.deviceHeading ?? 0;
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SEVERITY CONFIGURATION
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Severity = {
+        configs: {
+            critical: {
+                panelClass: 'rounded-xl border-2 border-red-500/50 bg-red-600/20 p-4 backdrop-blur-md transition-all duration-500 animate-pulse',
+                titleColor: 'text-red-500',
+                titleText: 'CRITICAL ALERT',
+                badgeText: 'CRITICAL',
+                badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-red-500/70 text-red-500 bg-red-500/20'
+            },
+            warning: {
+                panelClass: 'rounded-xl border border-orange-600/50 bg-orange-600/20 p-4 backdrop-blur-md transition-all duration-500',
+                titleColor: 'text-orange-500',
+                titleText: 'WARNING',
+                badgeText: 'WARNING',
+                badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-orange-500/70 text-orange-500 bg-orange-500/20'
+            },
+            caution: {
+                panelClass: 'rounded-xl border border-yellow-500/40 bg-yellow-500/15 p-4 backdrop-blur-md transition-all duration-500',
+                titleColor: 'text-yellow-400',
+                titleText: 'CAUTION',
+                badgeText: 'CAUTION',
+                badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-yellow-500/70 text-yellow-400 bg-yellow-500/20'
+            }
+        },
+        
+        getForDistance(distance) {
+            if (distance <= CONFIG.SEVERITY.CRITICAL) return this.configs.critical;
+            if (distance <= CONFIG.SEVERITY.WARNING) return this.configs.warning;
+            return this.configs.caution;
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // BRIDGE DETECTION ENGINE
+    // ─────────────────────────────────────────────────────────────────────────────
+    const BridgeDetector = {
+        /** Find nearest bridge within alert range */
+        findNearest(lat, lon) {
+            let closest = null;
+            let minDist = Infinity;
+            
+            for (const bridge of BRIDGES) {
+                if (bridge.type !== 'underpass') continue;
+                
+                const dist = Geo.distance(lat, lon, bridge.lat, bridge.lon);
+                const bearing = Geo.bearing(lat, lon, bridge.lat, bridge.lon);
+                
+                if (dist < minDist && dist <= CONFIG.MAX_ALERT_DISTANCE) {
+                    minDist = dist;
+                    closest = { bridge, distance: dist, bearing: Math.round(bearing) };
+                }
+            }
+            return closest;
+        },
+        
+        /** Determine if alert should be hidden based on approach criteria */
+        shouldHideAlert(bridgeData, speedMph) {
+            const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
+            const headingSamples = State.headingHistory.length;
+            const positionSamples = State.positionHistory.length;
+            const effectiveHeading = Heading.getEffective();
+            
+            // Force alert if very close and vehicle won't fit
+            if (bridgeData.distance <= CONFIG.CRITICAL_DISTANCE && 
+                State.vehicleHeight > bridgeData.bridge.clearance) {
+                return false;
+            }
+            
+            // Moving with enough heading data
+            if (isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES) {
+                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) > CONFIG.APPROACH_ANGLE;
+            }
+            
+            // Stationary with device compass
+            if (!isMoving && State.deviceHeading !== null) {
+                if (positionSamples < 2) return true;
+                return Geo.bearingDiff(bridgeData.bearing, State.deviceHeading) > CONFIG.APPROACH_ANGLE;
+            }
+            
+            // Stationary with GPS heading history
+            if (!isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
+                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) > CONFIG.APPROACH_ANGLE;
+            }
+            
+            // Not enough data - hide alert
+            return true;
+        },
+        
+        /** Main check routine */
+        check() {
+            if (!State.currentPosition || State.inTestMode) return;
+            
+            const { latitude, longitude, speed } = State.currentPosition;
+            const speedMph = Geo.msToMph(speed);
+            
+            const nearest = this.findNearest(latitude, longitude);
+            
+            if (nearest) {
+                const hideAlert = this.shouldHideAlert(nearest, speedMph);
+                State.nearestBridge = hideAlert ? { ...nearest, hideAlert: true } : nearest;
+            } else {
+                State.nearestBridge = null;
+            }
+            
+            Compass.update();
+            AlertPanel.update();
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // COMPASS DISPLAY
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Compass = {
+        init() {
             [0, 45, 90, 135, 180, 225, 270, 315].forEach(deg => {
                 const tick = document.createElement('div');
                 tick.className = 'compass-tick';
                 tick.style.transform = `rotate(${deg}deg)`;
                 tick.innerHTML = '<div class="mx-auto w-0.5 h-3 bg-primary/40 mt-1"></div>';
-                els.compassTicks.appendChild(tick);
+                DOM.compassTicks.appendChild(tick);
             });
-        }
-
-        function getCardinalDirection(bearing) {
-            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-            return dirs[Math.round(((bearing % 360) / 45)) % 8];
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 3959;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                     Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function calculateBearing(lat1, lon1, lat2, lon2) {
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
-            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) - 
-                     Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
-            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-        }
-
-        function getSmoothedHeading() {
-            if (!state.headingHistory.length) return null;
-            let sumX = 0, sumY = 0, totalWeight = 0;
-            for (let i = 0; i < state.headingHistory.length; i++) {
-                const weight = Math.pow(2, i);
-                const rad = state.headingHistory[i] * Math.PI / 180;
-                sumX += Math.cos(rad) * weight;
-                sumY += Math.sin(rad) * weight;
-                totalWeight += weight;
-            }
-            return (Math.atan2(sumY / totalWeight, sumX / totalWeight) * 180 / Math.PI + 360) % 360;
-        }
-
-        function getSeverityConfig(distance) {
-            if (distance <= 0.5) {
-                return {
-                    severity: 'critical',
-                    panelClass: 'rounded-xl border-2 border-red-500/50 bg-red-600/20 p-4 backdrop-blur-md transition-all duration-500 animate-pulse',
-                    titleColor: 'text-red-500',
-                    titleText: 'CRITICAL ALERT',
-                    badgeText: 'CRITICAL',
-                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-red-500/70 text-red-500 bg-red-500/20'
-                };
-            } else if (distance <= 1.0) {
-                return {
-                    severity: 'warning',
-                    panelClass: 'rounded-xl border border-orange-600/50 bg-orange-600/20 p-4 backdrop-blur-md transition-all duration-500',
-                    titleColor: 'text-orange-500',
-                    titleText: 'WARNING',
-                    badgeText: 'WARNING',
-                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-orange-500/70 text-orange-500 bg-orange-500/20'
-                };
+        },
+        
+        update() {
+            const displayHeading = State.deviceHeading ?? State.currentHeading ?? 0;
+            DOM.cardinalPoints.style.transform = `rotate(${-displayHeading}deg)`;
+            
+            if (State.nearestBridge) {
+                const relative = State.nearestBridge.bearing - displayHeading;
+                DOM.compassNeedle.style.display = 'flex';
+                DOM.compassNeedle.style.transform = `rotate(${relative}deg)`;
+                DOM.bearingValue.textContent = State.nearestBridge.bearing;
+                DOM.bearingDir.textContent = Geo.cardinalDir(State.nearestBridge.bearing);
+                DOM.distanceValue.textContent = State.nearestBridge.distance.toFixed(1);
             } else {
-                return {
-                    severity: 'caution',
-                    panelClass: 'rounded-xl border border-yellow-500/40 bg-yellow-500/15 p-4 backdrop-blur-md transition-all duration-500',
-                    titleColor: 'text-yellow-400',
-                    titleText: 'CAUTION',
-                    badgeText: 'CAUTION',
-                    badgeClass: 'px-3 py-1 text-[10px] font-semibold rounded-full transition-colors border-yellow-500/70 text-yellow-400 bg-yellow-500/20'
-                };
+                DOM.compassNeedle.style.display = 'none';
+                if (State.currentHeading !== null) {
+                    DOM.bearingValue.textContent = Math.round(State.currentHeading);
+                    DOM.bearingDir.textContent = Geo.cardinalDir(State.currentHeading);
+                }
+                DOM.distanceValue.textContent = '--';
             }
         }
+    };
 
-        function updateCompass() {
-            const displayHeading = state.deviceHeading !== null ? state.deviceHeading : (state.currentHeading || 0);
-            els.cardinalPoints.style.transform = `rotate(${-displayHeading}deg)`;
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ALERT PANEL
+    // ─────────────────────────────────────────────────────────────────────────────
+    const AlertPanel = {
+        update() {
+            const b = State.nearestBridge;
+            const shouldShow = b && !b.hideAlert && State.vehicleHeight > b.bridge.clearance;
             
-            if (state.nearestBridge) {
-                const relativeBearing = state.nearestBridge.bearing - displayHeading;
-                els.compassNeedle.style.display = 'flex';
-                els.compassNeedle.style.transform = `rotate(${relativeBearing}deg)`;
-                
-                els.bearingValue.textContent = state.nearestBridge.bearing;
-                els.bearingDir.textContent = getCardinalDirection(state.nearestBridge.bearing);
-                els.distanceValue.textContent = state.nearestBridge.distance.toFixed(1);
-            } else {
-                els.compassNeedle.style.display = 'none';
-                if (state.currentHeading !== null) {
-                    els.bearingValue.textContent = Math.round(state.currentHeading);
-                    els.bearingDir.textContent = getCardinalDirection(state.currentHeading);
-                }
-                els.distanceValue.textContent = '--';
+            if (!shouldShow) {
+                DOM.alertPanel.style.display = 'none';
+                return;
             }
+            
+            DOM.alertPanel.style.display = 'block';
+            
+            const cfg = Severity.getForDistance(b.distance);
+            DOM.alertPanel.className = cfg.panelClass;
+            DOM.alertTitle.textContent = cfg.titleText;
+            DOM.alertTitle.className = `text-base font-display font-bold uppercase tracking-wide ${cfg.titleColor}`;
+            DOM.severityBadge.textContent = cfg.badgeText;
+            DOM.severityBadge.className = cfg.badgeClass;
+            
+            DOM.bridgeName.textContent = b.bridge.name;
+            DOM.bridgeHeight.textContent = `${b.bridge.clearance}'`;
+            DOM.youHeight.textContent = `${State.vehicleHeight.toFixed(1)}'`;
+            
+            const clearance = b.bridge.clearance - State.vehicleHeight;
+            DOM.clearanceValue.textContent = `${clearance.toFixed(1)}'`;
+            DOM.clearanceValue.className = `text-xl font-bold font-mono ${clearance < 0 ? 'text-red-500' : 'text-emerald-500'}`;
+            DOM.youHighlight.style.display = clearance < 0 ? 'block' : 'none';
         }
+    };
 
-        function updateAlertPanel() {
-            if (state.nearestBridge && !state.nearestBridge.hideAlert && state.vehicleHeight > state.nearestBridge.bridge.clearance) {
-                els.alertPanel.style.display = 'block';
-                
-                const config = getSeverityConfig(state.nearestBridge.distance);
-                
-                els.alertPanel.className = config.panelClass;
-                els.alertTitle.textContent = config.titleText;
-                els.alertTitle.className = `text-base font-display font-bold uppercase tracking-wide ${config.titleColor}`;
-                els.severityBadge.textContent = config.badgeText;
-                els.severityBadge.className = config.badgeClass;
-                
-                els.bridgeName.textContent = state.nearestBridge.bridge.name;
-                els.bridgeHeight.textContent = `${state.nearestBridge.bridge.clearance}'`;
-                els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
-                
-                const clearance = state.nearestBridge.bridge.clearance - state.vehicleHeight;
-                els.clearanceValue.textContent = `${clearance.toFixed(1)}'`;
-                els.clearanceValue.className = `text-xl font-bold font-mono ${clearance < 0 ? 'text-red-500' : 'text-emerald-500'}`;
-                els.youHighlight.style.display = clearance < 0 ? 'block' : 'none';
-                
-            } else {
-                els.alertPanel.style.display = 'none';
-            }
-        }
-
-        function checkAlerts() {
-            if (!state.currentPosition || state.inTestMode) return;
-            
-            const { latitude, longitude } = state.currentPosition;
-            const speedMph = (state.currentPosition.speed || 0) * 2.23694;
-            const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
-            
-            let closestBridge = null;
-            let closestDistance = Infinity;
-
-            for (const bridge of BRIDGES) {
-                if (bridge.type !== 'underpass') continue;
-                
-                const distance = calculateDistance(latitude, longitude, bridge.lat, bridge.lon);
-                const bearing = calculateBearing(latitude, longitude, bridge.lat, bridge.lon);
-                
-                if (distance < closestDistance && distance <= CONFIG.MAX_ALERT_DISTANCE) {
-                    closestDistance = distance;
-                    closestBridge = { bridge, distance, bearing: Math.round(bearing) };
-                }
-            }
-
-            state.nearestBridge = closestBridge;
-            
-            if (closestBridge) {
-                let shouldHideAlert = false;
-                
-                const hasHeading = state.currentHeading !== null || state.deviceHeading !== null;
-                const effectiveHeading = state.currentHeading || state.deviceHeading || 0;
-                
-                const headingSampleCount = state.headingHistory.length;
-                const positionSampleCount = state.positionHistory.length;
-                
-                if (isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES) {
-                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
-                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
-                        shouldHideAlert = true;
-                    }
-                }
-                else if (!isMoving && state.deviceHeading !== null) {
-                    if (positionSampleCount < 2) {
-                        shouldHideAlert = true;
-                    } else {
-                        const bearingDiff = Math.abs((closestBridge.bearing - state.deviceHeading + 540) % 360 - 180);
-                        if (bearingDiff > CONFIG.APPROACH_ANGLE) {
-                            shouldHideAlert = true;
-                        }
-                    }
-                }
-                else if (!isMoving && headingSampleCount >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
-                    const bearingDiff = Math.abs((closestBridge.bearing - effectiveHeading + 540) % 360 - 180);
-                    if (bearingDiff > CONFIG.APPROACH_ANGLE) {
-                        shouldHideAlert = true;
-                    }
-                }
-                else {
-                    shouldHideAlert = true;
-                }
-                
-                if (closestBridge.distance <= 0.3 && state.vehicleHeight > closestBridge.bridge.clearance) {
-                    shouldHideAlert = false;
-                }
-                
-                if (shouldHideAlert) {
-                    state.nearestBridge = { ...closestBridge, hideAlert: true };
-                }
-            }
-            
-            updateCompass();
-            updateAlertPanel();
-        }
-
-        function onDeviceOrientation(e) {
-            let h = null;
-            if (e.webkitCompassHeading !== undefined) h = e.webkitCompassHeading;
-            else if (e.alpha !== null) h = (360 - e.alpha) % 360;
-            if (h !== null) {
-                state.deviceHeading = h;
-                updateCompass();
-            }
-        }
-
-        function onPositionUpdate(pos) {
-            state.previousPosition = state.currentPosition;
-            state.currentPosition = {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // GPS & ORIENTATION HANDLERS
+    // ─────────────────────────────────────────────────────────────────────────────
+    const GPS = {
+        onPosition(pos) {
+            State.previousPosition = State.currentPosition;
+            State.currentPosition = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude,
                 accuracy: pos.coords.accuracy,
                 speed: pos.coords.speed || 0,
                 timestamp: Date.now()
             };
-
-            state.positionHistory.push({ 
-                lat: state.currentPosition.latitude, 
-                lon: state.currentPosition.longitude, 
-                timestamp: state.currentPosition.timestamp 
-            });
-            if (state.positionHistory.length > CONFIG.POSITION_HISTORY_SIZE) state.positionHistory.shift();
-
-            let newHeading = null;
-            const speedMph = (pos.coords.speed || 0) * 2.23694;
             
-            if (pos.coords.heading !== null && pos.coords.heading !== undefined && speedMph >= CONFIG.MIN_SPEED_MPH) {
+            // Update position history
+            State.positionHistory.push({
+                lat: State.currentPosition.latitude,
+                lon: State.currentPosition.longitude,
+                timestamp: State.currentPosition.timestamp
+            });
+            if (State.positionHistory.length > CONFIG.POSITION_HISTORY_SIZE) {
+                State.positionHistory.shift();
+            }
+            
+            // Calculate heading
+            const speedMph = Geo.msToMph(pos.coords.speed);
+            let newHeading = null;
+            
+            if (pos.coords.heading != null && speedMph >= CONFIG.MIN_SPEED_MPH) {
                 newHeading = pos.coords.heading;
-            } else if (state.previousPosition && speedMph >= CONFIG.MIN_SPEED_MPH) {
-                newHeading = calculateBearing(
-                    state.previousPosition.latitude, 
-                    state.previousPosition.longitude, 
-                    state.currentPosition.latitude, 
-                    state.currentPosition.longitude
+            } else if (State.previousPosition && speedMph >= CONFIG.MIN_SPEED_MPH) {
+                newHeading = Geo.bearing(
+                    State.previousPosition.latitude, State.previousPosition.longitude,
+                    State.currentPosition.latitude, State.currentPosition.longitude
                 );
             }
-
+            
             if (newHeading !== null) {
-                state.headingHistory.push(newHeading);
-                if (state.headingHistory.length > CONFIG.HEADING_HISTORY_SIZE) state.headingHistory.shift();
-                state.currentHeading = getSmoothedHeading();
+                Heading.addSample(newHeading);
             }
-
-            els.latValue.textContent = state.currentPosition.latitude.toFixed(6);
-            els.lonValue.textContent = state.currentPosition.longitude.toFixed(6);
-
+            
+            // Update display
+            DOM.latValue.textContent = State.currentPosition.latitude.toFixed(6);
+            DOM.lonValue.textContent = State.currentPosition.longitude.toFixed(6);
+            
+            // Throttled bridge check
             const now = Date.now();
-            if (now - state.lastCheckTime >= CONFIG.CHECK_THROTTLE) {
-                checkAlerts();
-                state.lastCheckTime = now;
+            if (now - State.lastCheckTime >= CONFIG.CHECK_THROTTLE) {
+                BridgeDetector.check();
+                State.lastCheckTime = now;
             }
             
-            updateCompass();
-        }
-
-        function startMonitoring() {
-            if (!navigator.geolocation || state.inTestMode) return;
+            Compass.update();
+        },
+        
+        onOrientation(e) {
+            let h = null;
+            if (e.webkitCompassHeading !== undefined) h = e.webkitCompassHeading;
+            else if (e.alpha !== null) h = (360 - e.alpha) % 360;
             
-            state.watchId = navigator.geolocation.watchPosition(
-                onPositionUpdate, 
-                e => console.error('GPS Error:', e), 
+            if (h !== null) {
+                State.deviceHeading = h;
+                Compass.update();
+            }
+        },
+        
+        onError(e) {
+            console.error('GPS Error:', e);
+        },
+        
+        start() {
+            if (!navigator.geolocation || State.inTestMode) return;
+            
+            State.watchId = navigator.geolocation.watchPosition(
+                this.onPosition.bind(this),
+                this.onError,
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
             
             if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', onDeviceOrientation);
+                window.addEventListener('deviceorientation', this.onOrientation.bind(this));
             }
             
-            state.isMonitoring = true;
+            State.isMonitoring = true;
+        },
+        
+        stop() {
+            if (State.watchId !== null) {
+                navigator.geolocation.clearWatch(State.watchId);
+                State.watchId = null;
+            }
+            window.removeEventListener('deviceorientation', this.onOrientation);
+            State.isMonitoring = false;
         }
+    };
 
-        function openEditModal() {
-            els.editModal.classList.remove('hidden');
-            els.editModal.classList.add('flex');
-            els.heightInput.value = state.vehicleHeight;
+    // ─────────────────────────────────────────────────────────────────────────────
+    // UI CONTROLS
+    // ─────────────────────────────────────────────────────────────────────────────
+    const UI = {
+        openEditModal() {
+            DOM.editModal.classList.remove('hidden');
+            DOM.editModal.classList.add('flex');
+            DOM.heightInput.value = State.vehicleHeight;
+        },
+        
+        closeEditModal() {
+            DOM.editModal.classList.add('hidden');
+            DOM.editModal.classList.remove('flex');
+        },
+        
+        saveHeight() {
+            State.vehicleHeight = parseFloat(DOM.heightInput.value);
+            DOM.vehicleHeight.textContent = `${State.vehicleHeight.toFixed(1)} ft`;
+            DOM.youHeight.textContent = `${State.vehicleHeight.toFixed(1)}'`;
+            AlertPanel.update();
+            this.closeEditModal();
         }
+    };
 
-        function closeEditModal() {
-            els.editModal.classList.add('hidden');
-            els.editModal.classList.remove('flex');
-        }
-
-        function saveHeight() {
-            state.vehicleHeight = parseFloat(els.heightInput.value);
-            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
-            els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
-            updateAlertPanel();
-            closeEditModal();
-        }
-
-        function toggleTestMode() {
-            if (!state.inTestMode) {
-                state.inTestMode = true;
-                state.testScenario = 0;
-                els.testBtn.textContent = 'Next';
-                els.testBtn.classList.add('bg-primary', 'text-background', 'border-primary');
-                els.testBtn.classList.remove('border-white/20', 'hover:bg-white/5');
-                runTestScenario();
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TEST MODE
+    // ─────────────────────────────────────────────────────────────────────────────
+    const Test = {
+        scenarios: [
+            { height: 15.0, latOffset: -0.005, distance: 0.3 },  // Critical
+            { height: 14.5, latOffset: -0.012, distance: 0.8 },  // Warning
+            { height: 14.0, latOffset: -0.022, distance: 1.5 }   // Caution
+        ],
+        
+        toggle() {
+            if (!State.inTestMode) {
+                State.inTestMode = true;
+                State.testScenario = 0;
+                DOM.testBtn.textContent = 'Next';
+                DOM.testBtn.classList.add('bg-primary', 'text-background', 'border-primary');
+                DOM.testBtn.classList.remove('border-white/20', 'hover:bg-white/5');
+                this.run();
             } else {
-                state.testScenario++;
-                if (state.testScenario > 2) {
-                    exitTestMode();
+                State.testScenario++;
+                if (State.testScenario >= this.scenarios.length) {
+                    this.exit();
                 } else {
-                    runTestScenario();
+                    this.run();
                 }
             }
-        }
-
-        function runTestScenario() {
-            state.currentHeading = 45;
-            state.headingHistory = Array(5).fill(45);
-            state.positionHistory = [
-                { lat: 34.17046697384523 - 0.006, lon: -118.50114573681475, timestamp: Date.now() - 2000 },
-                { lat: 34.17046697384523 - 0.0055, lon: -118.50114573681475, timestamp: Date.now() - 1000 },
-                { lat: 34.17046697384523 - 0.005, lon: -118.50114573681475, timestamp: Date.now() }
+        },
+        
+        run() {
+            const scenario = this.scenarios[State.testScenario];
+            const bridge = BRIDGES[0];
+            
+            // Setup test state
+            State.currentHeading = 45;
+            State.headingHistory = Array(5).fill(45);
+            State.positionHistory = [
+                { lat: bridge.lat - 0.006, lon: bridge.lon, timestamp: Date.now() - 2000 },
+                { lat: bridge.lat - 0.0055, lon: bridge.lon, timestamp: Date.now() - 1000 },
+                { lat: bridge.lat - 0.005, lon: bridge.lon, timestamp: Date.now() }
             ];
             
-            const scenarios = [
-                { height: 15.0, latOffset: -0.005, distance: 0.3 },
-                { height: 14.5, latOffset: -0.012, distance: 0.8 },
-                { height: 14.0, latOffset: -0.022, distance: 1.5 }
-            ];
-            
-            const scenario = scenarios[state.testScenario];
-            state.vehicleHeight = scenario.height;
-            state.currentPosition = {
-                latitude: BRIDGES[0].lat + scenario.latOffset,
-                longitude: BRIDGES[0].lon,
+            State.vehicleHeight = scenario.height;
+            State.currentPosition = {
+                latitude: bridge.lat + scenario.latOffset,
+                longitude: bridge.lon,
                 speed: 13.41,
                 timestamp: Date.now()
             };
             
-            state.nearestBridge = {
-                bridge: BRIDGES[0],
+            State.nearestBridge = {
+                bridge: bridge,
                 distance: scenario.distance,
                 bearing: 45
             };
             
-            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
-            els.youHeight.textContent = `${state.vehicleHeight.toFixed(1)}'`;
-            els.latValue.textContent = state.currentPosition.latitude.toFixed(6);
-            els.lonValue.textContent = state.currentPosition.longitude.toFixed(6);
+            // Update displays
+            DOM.vehicleHeight.textContent = `${State.vehicleHeight.toFixed(1)} ft`;
+            DOM.youHeight.textContent = `${State.vehicleHeight.toFixed(1)}'`;
+            DOM.latValue.textContent = State.currentPosition.latitude.toFixed(6);
+            DOM.lonValue.textContent = State.currentPosition.longitude.toFixed(6);
             
-            updateCompass();
-            updateAlertPanel();
+            Compass.update();
+            AlertPanel.update();
+        },
+        
+        exit() {
+            State.inTestMode = false;
+            State.testScenario = 0;
+            
+            DOM.testBtn.textContent = 'Test';
+            DOM.testBtn.classList.remove('bg-primary', 'text-background', 'border-primary');
+            DOM.testBtn.classList.add('border-white/20', 'hover:bg-white/5');
+            
+            // Reset state
+            State.vehicleHeight = 15.0;
+            State.nearestBridge = null;
+            State.currentPosition = null;
+            State.currentHeading = null;
+            State.headingHistory = [];
+            State.positionHistory = [];
+            
+            // Reset displays
+            DOM.vehicleHeight.textContent = `${State.vehicleHeight.toFixed(1)} ft`;
+            DOM.latValue.textContent = '---.------';
+            DOM.lonValue.textContent = '---.------';
+            DOM.bearingValue.textContent = '--';
+            DOM.bearingDir.textContent = '--';
+            DOM.distanceValue.textContent = '--';
+            
+            Compass.update();
+            AlertPanel.update();
+            GPS.start();
         }
+    };
 
-        function exitTestMode() {
-            state.inTestMode = false;
-            state.testScenario = 0;
-            
-            els.testBtn.textContent = 'Test';
-            els.testBtn.classList.remove('bg-primary', 'text-background', 'border-primary');
-            els.testBtn.classList.add('border-white/20', 'hover:bg-white/5');
-            
-            state.vehicleHeight = 15.0;
-            state.nearestBridge = null;
-            state.currentPosition = null;
-            state.currentHeading = null;
-            state.headingHistory = [];
-            state.positionHistory = [];
-            
-            els.vehicleHeight.textContent = `${state.vehicleHeight.toFixed(1)} ft`;
-            els.latValue.textContent = '---.------';
-            els.lonValue.textContent = '---.------';
-            els.bearingValue.textContent = '--';
-            els.bearingDir.textContent = '--';
-            els.distanceValue.textContent = '--';
-            
-            updateCompass();
-            updateAlertPanel();
-            startMonitoring();
+    // ─────────────────────────────────────────────────────────────────────────────
+    // INITIALIZATION
+    // ─────────────────────────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+        // Cache DOM elements
+        DOM_IDS.forEach(id => DOM[id] = document.getElementById(id));
+        
+        // Initialize components
+        Compass.init();
+        
+        // Start GPS if not in test mode
+        if (!State.inTestMode) {
+            GPS.start();
         }
-
-        window.addEventListener('load', () => {
-            initElements();
-            initCompass();
-            if (!state.inTestMode) startMonitoring();
-        });
+    });
     </script>
 </body>
 </html>
