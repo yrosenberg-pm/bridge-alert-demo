@@ -51,7 +51,7 @@
                 <h1 class="font-display font-bold text-lg leading-none">Road Warrior</h1>
                 <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v4.9</span>
+                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v5.0</span>
                 </div>
             </div>
         </div>
@@ -178,7 +178,7 @@
 
     <script>
     /* ═══════════════════════════════════════════════════════════════════════════
-       ROAD WARRIOR v4.9 - Bridge Clearance Alert System
+       ROAD WARRIOR v5.0 - Bridge Clearance Alert System
        Optimized for maintainability and future development
        ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -187,11 +187,11 @@
     // ─────────────────────────────────────────────────────────────────────────────
     const CONFIG = {
         // Heading stabilization
-        HEADING_HISTORY_SIZE: 15,      // Samples for heading smoothing
+        HEADING_HISTORY_SIZE: 5,       // Samples for heading smoothing (small for fast turn response)
         POSITION_HISTORY_SIZE: 5,      // Samples for position tracking
         
         // Alert timing
-        CHECK_THROTTLE: 2000,          // ms between bridge checks
+        CHECK_THROTTLE: 1000,          // ms between bridge checks (faster response)
         
         // Movement detection
         MIN_SPEED_MPH: 5,              // Below this = stationary
@@ -203,7 +203,7 @@
         // Heading validation
         MIN_HEADING_SAMPLES: 3,        // Samples needed while moving
         MIN_HEADING_SAMPLES_SLOW: 5,   // Samples needed while stationary
-        APPROACH_ANGLE: 90,            // Max degrees off-bearing to alert
+        APPROACH_ANGLE: 40,            // Max degrees off-bearing to alert (tight - must be heading toward bridge)
         
         // Severity thresholds (miles)
         SEVERITY: {
@@ -302,6 +302,16 @@
     const Heading = {
         /** Add a heading sample and maintain history size */
         addSample(heading) {
+            // Detect significant turn - clear history if heading changed dramatically
+            if (State.headingHistory.length > 0) {
+                const lastHeading = State.headingHistory[State.headingHistory.length - 1];
+                const turnAmount = Geo.bearingDiff(heading, lastHeading);
+                if (turnAmount > 45) {
+                    // Big turn detected - clear history for fresh start
+                    State.headingHistory = [];
+                }
+            }
+            
             State.headingHistory.push(heading);
             if (State.headingHistory.length > CONFIG.HEADING_HISTORY_SIZE) {
                 State.headingHistory.shift();
@@ -393,7 +403,6 @@
             const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
             const headingSamples = State.headingHistory.length;
             const positionSamples = State.positionHistory.length;
-            const effectiveHeading = Heading.getEffective();
             
             // Force alert if very close and vehicle won't fit
             if (bridgeData.distance <= CONFIG.CRITICAL_DISTANCE && 
@@ -401,23 +410,32 @@
                 return false;
             }
             
-            // Moving with enough heading data
+            // Prefer device compass when available - it's more responsive to turns
+            if (State.deviceHeading !== null) {
+                const bearingDiff = Geo.bearingDiff(bridgeData.bearing, State.deviceHeading);
+                if (bearingDiff >= CONFIG.APPROACH_ANGLE) {
+                    return true; // Not approaching - hide alert
+                }
+                // Device says we're approaching, but verify we have position data
+                if (positionSamples < 2) {
+                    return true; // Not enough position data yet
+                }
+                return false; // Approaching - show alert
+            }
+            
+            // Fallback to GPS-based heading when moving
             if (isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES) {
-                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) > CONFIG.APPROACH_ANGLE;
+                const effectiveHeading = Heading.getEffective();
+                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) >= CONFIG.APPROACH_ANGLE;
             }
             
-            // Stationary with device compass
-            if (!isMoving && State.deviceHeading !== null) {
-                if (positionSamples < 2) return true;
-                return Geo.bearingDiff(bridgeData.bearing, State.deviceHeading) > CONFIG.APPROACH_ANGLE;
-            }
-            
-            // Stationary with GPS heading history
+            // Stationary with GPS heading history only
             if (!isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
-                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) > CONFIG.APPROACH_ANGLE;
+                const effectiveHeading = Heading.getEffective();
+                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) >= CONFIG.APPROACH_ANGLE;
             }
             
-            // Not enough data - hide alert
+            // Not enough data - hide alert (be conservative)
             return true;
         },
         
