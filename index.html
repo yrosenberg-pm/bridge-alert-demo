@@ -51,7 +51,7 @@
                 <h1 class="font-display font-bold text-lg leading-none">Road Warrior</h1>
                 <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v5.0</span>
+                    <span class="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">System Active v5.1</span>
                 </div>
             </div>
         </div>
@@ -88,14 +88,14 @@
                 <div class="absolute inset-0 rounded-full border-2 border-primary/20 bg-black/20 backdrop-blur-sm shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]"></div>
                 <div class="absolute inset-0" id="compassTicks"></div>
                 
-                <div class="absolute inset-0 w-full h-full transition-transform duration-300 ease-out" id="cardinalPoints">
+                <div class="absolute inset-0 w-full h-full" id="cardinalPoints">
                     <div class="absolute top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-primary">N</div>
                     <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-bold text-primary/50">S</div>
                     <div class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary/50">W</div>
                     <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary/50">E</div>
                 </div>
 
-                <div class="absolute w-full h-full flex items-center justify-center transition-transform duration-300 ease-out" id="compassNeedle" style="display: none;">
+                <div class="absolute w-full h-full flex items-center justify-center" id="compassNeedle" style="display: none;">
                     <div class="relative h-full w-8 flex flex-col items-center justify-start py-8">
                         <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[16px] border-b-primary" style="filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.8));"></div>
                     </div>
@@ -178,7 +178,7 @@
 
     <script>
     /* ═══════════════════════════════════════════════════════════════════════════
-       ROAD WARRIOR v5.0 - Bridge Clearance Alert System
+       ROAD WARRIOR v5.1 - Bridge Clearance Alert System
        Optimized for maintainability and future development
        ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -402,7 +402,6 @@
         shouldHideAlert(bridgeData, speedMph) {
             const isMoving = speedMph >= CONFIG.MIN_SPEED_MPH;
             const headingSamples = State.headingHistory.length;
-            const positionSamples = State.positionHistory.length;
             
             // Force alert if very close and vehicle won't fit
             if (bridgeData.distance <= CONFIG.CRITICAL_DISTANCE && 
@@ -410,32 +409,22 @@
                 return false;
             }
             
-            // Prefer device compass when available - it's more responsive to turns
-            if (State.deviceHeading !== null) {
-                const bearingDiff = Geo.bearingDiff(bridgeData.bearing, State.deviceHeading);
-                if (bearingDiff >= CONFIG.APPROACH_ANGLE) {
-                    return true; // Not approaching - hide alert
-                }
-                // Device says we're approaching, but verify we have position data
-                if (positionSamples < 2) {
-                    return true; // Not enough position data yet
-                }
-                return false; // Approaching - show alert
-            }
-            
-            // Fallback to GPS-based heading when moving
+            // PRIMARY: Use GPS heading when moving (actual direction of travel)
             if (isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES) {
-                const effectiveHeading = Heading.getEffective();
-                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) >= CONFIG.APPROACH_ANGLE;
+                const gpsHeading = Heading.getSmoothed();
+                if (gpsHeading !== null) {
+                    const bearingDiff = Geo.bearingDiff(bridgeData.bearing, gpsHeading);
+                    return bearingDiff >= CONFIG.APPROACH_ANGLE;
+                }
             }
             
-            // Stationary with GPS heading history only
-            if (!isMoving && headingSamples >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
-                const effectiveHeading = Heading.getEffective();
-                return Geo.bearingDiff(bridgeData.bearing, effectiveHeading) >= CONFIG.APPROACH_ANGLE;
+            // FALLBACK: Use device compass only when stationary (no GPS heading available)
+            if (!isMoving && State.deviceHeading !== null && headingSamples >= CONFIG.MIN_HEADING_SAMPLES_SLOW) {
+                const bearingDiff = Geo.bearingDiff(bridgeData.bearing, State.deviceHeading);
+                return bearingDiff >= CONFIG.APPROACH_ANGLE;
             }
             
-            // Not enough data - hide alert (be conservative)
+            // Not enough data - hide alert (be conservative, don't cry wolf)
             return true;
         },
         
